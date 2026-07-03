@@ -87,6 +87,9 @@ body { font-family: 'DM Sans', -apple-system, sans-serif; background: #f0f2f5; c
 .map-lnk { font-size: 11px; color: var(--costar); text-decoration: none; }
 .map-lnk:hover { text-decoration: underline; }
 .row-num { color: #bbb; font-size: 11px; }
+.photo-cell { padding: 5px 8px !important; }
+.photo-thumb { width: 62px; height: 46px; object-fit: cover; border-radius: 3px; display: block; }
+.photo-ph { width: 62px; height: 46px; border-radius: 3px; background: linear-gradient(135deg, #0D1B2E 0%, #1A2F4A 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.25); font-size: 20px; }
 
 /* EXPAND CONTENT */
 .expand-td { padding: 0 !important; }
@@ -158,6 +161,7 @@ textarea.fi { min-height: 58px; resize: vertical; }
   <table class="tbl" id="tbl-sale">
     <thead><tr>
       <th style="width:32px">#</th>
+      <th style="width:70px">Photo</th>
       <th>Address</th>
       <th>Type</th>
       <th>Asking Price</th>
@@ -184,6 +188,7 @@ textarea.fi { min-height: 58px; resize: vertical; }
   <table class="tbl" id="tbl-lease">
     <thead><tr>
       <th style="width:32px">#</th>
+      <th style="width:70px">Photo</th>
       <th>Address</th>
       <th>Type</th>
       <th>Rate</th>
@@ -381,6 +386,7 @@ function renderTable(tab) {
     if (tab === "sale") {
       tr.innerHTML =
         "<td class='row-num'>" + (i+1) + "</td>" +
+        "<td class='photo-cell'>" + (item.photoUrl ? "<img class='photo-thumb' src='" + ea(item.photoUrl) + "' alt=''>" : "<div class='photo-ph'>&#128247;</div>") + "</td>" +
         "<td onclick=\"toggle('" + item.id + "','" + tab + "')\">" +
           "<span class='chevron'>&#9660;</span>" +
           "<div class='addr-main'>" + eh(item.address) + "</div>" +
@@ -395,6 +401,7 @@ function renderTable(tab) {
     } else {
       tr.innerHTML =
         "<td class='row-num'>" + (i+1) + "</td>" +
+        "<td class='photo-cell'>" + (item.photoUrl ? "<img class='photo-thumb' src='" + ea(item.photoUrl) + "' alt=''>" : "<div class='photo-ph'>&#128247;</div>") + "</td>" +
         "<td onclick=\"toggle('" + item.id + "','" + tab + "')\">" +
           "<span class='chevron'>&#9660;</span>" +
           "<div class='addr-main'>" + eh(item.address) + "</div>" +
@@ -413,7 +420,7 @@ function renderTable(tab) {
       const exTr = document.createElement("tr");
       exTr.className = "expand-row";
       exTr.id = "exp-" + item.id;
-      const cols = tab === "sale" ? 9 : 8;
+      const cols = tab === "sale" ? 10 : 9;
       const priceLbl = tab === "sale" ? "Asking Price" : "Asking Rate";
       const sizeLbl  = tab === "sale" ? "Building / Land Size" : "Available SF";
 
@@ -436,6 +443,7 @@ function renderTable(tab) {
           "<div class='fg'><label class='fl'>CoStar URL</label><input class='fi' id='e-csurl-" + item.id + "' value=\"" + ea(item.costarUrl||"") + "\"></div>" +
           "<div class='fg'><label class='fl'>Moody's URL</label><input class='fi' id='e-mdurl-" + item.id + "' value=\"" + ea(item.moodysUrl||"") + "\"></div>" +
           "<div class='fg'><label class='fl'>Google Maps URL</label><input class='fi' id='e-map-" + item.id + "' value=\"" + ea(item.mapUrl||"") + "\"></div>" +
+          "<div class='fg'><label class='fl'>Photo URL</label><input class='fi' id='e-photo-" + item.id + "' value=\"" + ea(item.photoUrl||"") + "\" placeholder='Paste image URL from CoStar, etc.'></div>" +
           "<div class='fg full'><label class='fl'>Notes</label><textarea class='fi' id='e-notes-" + item.id + "'>" + eh(item.notes||"") + "</textarea></div>" +
         "</div>" +
         "<div class='expand-actions'>" +
@@ -485,6 +493,7 @@ function saveProp(id, tab) {
   item.costarUrl = document.getElementById("e-csurl-" + id).value;
   item.moodysUrl = document.getElementById("e-mdurl-" + id).value;
   item.mapUrl    = document.getElementById("e-map-"   + id).value;
+  item.photoUrl  = document.getElementById("e-photo-" + id).value;
   item.notes     = document.getElementById("e-notes-" + id).value;
   expandedId = null;
   save();
@@ -508,7 +517,7 @@ function addProp(tab) {
     id: nid, address: "New Property Address", city: "City, MS",
     type: "Commercial", price: "TBD", size: "", capRate: "",
     dom: 0, domLabel: "New", source: "CoStar",
-    costarUrl: "", moodysUrl: "", mapUrl: "", notes: ""
+    costarUrl: "", moodysUrl: "", mapUrl: "", photoUrl: "", notes: ""
   };
   if (tab === "sale") appData.forSale.unshift(item);
   else                appData.forLease.unshift(item);
