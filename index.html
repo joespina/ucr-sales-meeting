@@ -128,7 +128,7 @@ textarea.fi { min-height: 58px; resize: vertical; }
 <div class="hdr">
   <div class="hdr-left">
     <h1>Section 6 &mdash; Review External Listings</h1>
-    <p>NAI UCR Properties &bull; Weekly Sales Meeting &bull; June 24, 2026</p>
+    <p>NAI UCR Properties &bull; Weekly Sales Meeting &bull; <span id="meetingDate" contenteditable="true" spellcheck="false" style="border-bottom:1px dashed rgba(255,255,255,.4);outline:none;cursor:text;padding-bottom:1px" title="Click to edit date">June 24, 2026</span></p>
   </div>
   <div class="hdr-right">
     <span class="sync-txt" id="syncTxt">Not synced</span>
@@ -300,7 +300,8 @@ const DEFAULT = {
 // ─────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────
-const STORAGE_KEY = "ucr_s6_v1";
+const DATA_VERSION = "20260624"; // ← Claude updates this each week; new version = fresh start
+const STORAGE_KEY  = "ucr_s6_" + DATA_VERSION;
 let appData = { forSale: [], forLease: [] };
 let expandedId = null;
 let activeTab = "sale";
@@ -584,10 +585,18 @@ function loadSnapshot(input) {
 function init() {
   if (!load()) {
     appData = {
-      forSale:  JSON.parse(JSON.stringify(DEFAULT.forSale)),
-      forLease: JSON.parse(JSON.stringify(DEFAULT.forLease))
+      forSale:     JSON.parse(JSON.stringify(DEFAULT.forSale)),
+      forLease:    JSON.parse(JSON.stringify(DEFAULT.forLease)),
+      meetingDate: "June 24, 2026"
     };
   }
+  // Restore editable date in header
+  var md = document.getElementById("meetingDate");
+  if (appData.meetingDate) md.textContent = appData.meetingDate;
+  md.addEventListener("blur", function() {
+    appData.meetingDate = this.textContent.trim();
+    save();
+  });
   renderAll();
 }
 
