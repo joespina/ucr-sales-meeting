@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAI UCR — Section 6: External Listings</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0D1B2E;
+  --navy-mid: #1A2F4A;
+  --gold: #C9A84C;
+  --gold-light: #E8C97A;
+  --costar: #1E4D8C;
+  --moodys: #6B3FA0;
+  --dom-green: #1a6b3c;
+  --dom-green-bg: #e6f4ed;
+  --dom-amber: #92600a;
+  --dom-amber-bg: #fef3e2;
+  --dom-red: #9b1c1c;
+  --dom-red-bg: #fde8e8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', -apple-system, sans-serif; background: #f0f2f5; color: #1a1a1a; font-size: 13px; }
+
+/* HEADER */
+.hdr { background: var(--navy); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
+.hdr-left h1 { color: #fff; font-size: 17px; font-weight: 600; letter-spacing: .2px; }
+.hdr-left p { color: rgba(255,255,255,.55); font-size: 11px; margin-top: 2px; }
+.hdr-right { display: flex; gap: 8px; align-items: center; }
+.sync-txt { color: rgba(255,255,255,.45); font-size: 11px; margin-right: 4px; }
+.btn { padding: 6px 13px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-gold { background: var(--gold); color: var(--navy); }
+.btn-gold:hover { background: var(--gold-light); }
+.btn-outline { background: transparent; color: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,.25); }
+.btn-outline:hover { background: rgba(255,255,255,.1); }
+
+/* TABS */
+.tabs { background: #fff; border-bottom: 2px solid #e5e7eb; padding: 0 28px; display: flex; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,.07); }
+.tab { padding: 12px 16px; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; user-select: none; }
+.tab:hover { color: var(--navy); }
+.tab.active { color: var(--navy); border-bottom-color: var(--gold); font-weight: 600; }
+.tab-cnt { background: #eee; color: #777; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 5px; }
+.tab.active .tab-cnt { background: var(--navy); color: #fff; }
+
+/* PANELS */
+.panel { display: none; padding: 18px 28px 48px; }
+.panel.active { display: block; }
+
+/* PANEL HEADER */
+.ph { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.ph-left h2 { font-size: 15px; font-weight: 600; color: var(--navy); }
+.ph-left p { font-size: 11px; color: #888; margin-top: 2px; }
+.btn-add { background: var(--navy); color: #fff; padding: 7px 14px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-add:hover { background: var(--navy-mid); }
+
+/* DEDUP BANNER */
+.dedup { background: #fffbeb; border: 1px solid #e8c84a; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #7a5c00; margin-bottom: 14px; }
+
+/* TABLE */
+.tbl { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.tbl thead th { background: var(--navy); color: #fff; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; padding: 10px 12px; text-align: left; white-space: nowrap; }
+.tbl tbody tr.data-row { border-bottom: 1px solid #f0f2f4; cursor: pointer; }
+.tbl tbody tr.data-row:hover { background: #f8f9fb; }
+.tbl tbody tr.data-row.expanded { background: #f0f4f8; }
+.tbl tbody tr.expand-row { background: #f8f9fb; }
+.tbl td { padding: 9px 12px; vertical-align: middle; }
+
+/* ADDRESS CELL */
+.addr-main { font-weight: 600; color: var(--navy); font-size: 13px; }
+.addr-sub { color: #888; font-size: 11px; margin-top: 1px; }
+.chevron { float: right; color: #bbb; transition: transform .2s; line-height: 1; }
+.expanded .chevron { transform: rotate(180deg); }
+
+/* BADGES */
+.type-badge { font-size: 10px; background: #f0f0f0; color: #555; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.dom-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.dom-g { background: var(--dom-green-bg); color: var(--dom-green); }
+.dom-a { background: var(--dom-amber-bg); color: var(--dom-amber); }
+.dom-r { background: var(--dom-red-bg); color: var(--dom-red); }
+.src-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; text-decoration: none; display: inline-block; }
+.src-cs { background: #e8f0fb; color: var(--costar); }
+.src-md { background: #f0eaf8; color: var(--moodys); }
+.src-both { background: #fff8e1; color: #7a5c00; }
+.src-nai { background: #fff3e0; color: #c65e00; }
+.price-cell { font-weight: 600; color: var(--navy); white-space: nowrap; font-size: 12px; }
+.map-lnk { font-size: 11px; color: var(--costar); text-decoration: none; }
+.map-lnk:hover { text-decoration: underline; }
+.row-num { color: #bbb; font-size: 11px; }
+
+/* EXPAND CONTENT */
+.expand-td { padding: 0 !important; }
+.expand-content { padding: 16px 20px 14px; border-top: 2px solid var(--gold); }
+.expand-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 11px; margin-bottom: 14px; }
+.fg { display: flex; flex-direction: column; gap: 3px; }
+.fg.full { grid-column: 1 / -1; }
+.fl { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #999; font-weight: 600; }
+.fi { border: 1px solid #d8dde2; border-radius: 4px; padding: 6px 8px; font-size: 12px; font-family: inherit; width: 100%; background: #fff; }
+.fi:focus { outline: none; border-color: var(--navy); }
+select.fi { cursor: pointer; }
+textarea.fi { min-height: 58px; resize: vertical; }
+.expand-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-save { background: var(--navy); color: #fff; padding: 7px 16px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-save:hover { background: var(--navy-mid); }
+.btn-cancel-e { background: #f0f0f0; color: #555; padding: 7px 16px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.btn-cancel-e:hover { background: #e0e0e0; }
+.btn-del { background: #fee2e2; color: #dc2626; padding: 7px 16px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; margin-right: auto; }
+.btn-del:hover { background: #fca5a5; }
+
+/* PLACEHOLDER */
+.placeholder { background: #fff; border-radius: 8px; padding: 40px; text-align: center; border: 2px dashed #ddd; }
+.placeholder h3 { color: #666; margin-bottom: 8px; font-size: 15px; }
+.placeholder p { color: #999; font-size: 13px; line-height: 1.6; }
+.placeholder a { color: var(--costar); }
+
+@media print {
+  .hdr-right, .tabs, .expand-actions, .btn-add, .dedup, .expand-content { display: none !important; }
+  .panel { display: block !important; padding: 10px; }
+  .tbl { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <h1>Section 6 &mdash; Review External Listings</h1>
+    <p>NAI UCR Properties &bull; Weekly Sales Meeting &bull; June 24, 2026</p>
+  </div>
+  <div class="hdr-right">
+    <span class="sync-txt" id="syncTxt">Not synced</span>
+    <button class="btn btn-outline" onclick="document.getElementById('snapIn').click()">Load Snapshot</button>
+    <input type="file" id="snapIn" accept=".json" style="display:none" onchange="loadSnapshot(this)">
+    <button class="btn btn-outline" onclick="downloadSnapshot()">Download Snapshot</button>
+    <button class="btn btn-gold" onclick="window.print()">Print / PDF</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('sale',this)">For Sale <span class="tab-cnt" id="cnt-sale">0</span></div>
+  <div class="tab" onclick="showTab('lease',this)">For Lease <span class="tab-cnt" id="cnt-lease">0</span></div>
+  <div class="tab" onclick="showTab('salecomps',this)">Sale Comps <span class="tab-cnt">&mdash;</span></div>
+  <div class="tab" onclick="showTab('leasecomps',this)">Lease Comps <span class="tab-cnt">&mdash;</span></div>
+  <div class="tab" onclick="showTab('crexi',this)">Crexi <span class="tab-cnt">&mdash;</span></div>
+  <div class="tab" onclick="showTab('mls',this)">MLS <span class="tab-cnt">&mdash;</span></div>
+</div>
+
+<!-- FOR SALE -->
+<div id="panel-sale" class="panel active">
+  <div class="ph">
+    <div class="ph-left">
+      <h2>For Sale &mdash; New Listings This Week</h2>
+      <p>Sources: CoStar + Moody's &bull; 5 cross-platform duplicates consolidated</p>
+    </div>
+    <button class="btn-add" onclick="addProp('sale')">+ Add Property</button>
+  </div>
+  <div class="dedup">&#9889; <strong>5 properties appeared on both CoStar and Moody&rsquo;s</strong> and have been consolidated into single rows with links to both platforms.</div>
+  <table class="tbl" id="tbl-sale">
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>Address</th>
+      <th>Type</th>
+      <th>Asking Price</th>
+      <th>Size</th>
+      <th>Cap Rate</th>
+      <th>DOM</th>
+      <th>Source</th>
+      <th style="width:60px">Map</th>
+    </tr></thead>
+    <tbody id="tbody-sale"></tbody>
+  </table>
+</div>
+
+<!-- FOR LEASE -->
+<div id="panel-lease" class="panel">
+  <div class="ph">
+    <div class="ph-left">
+      <h2>For Lease &mdash; Active Availabilities</h2>
+      <p>Sources: CoStar + Moody's &bull; 1 cross-platform duplicate consolidated</p>
+    </div>
+    <button class="btn-add" onclick="addProp('lease')">+ Add Property</button>
+  </div>
+  <div class="dedup">&#9889; <strong>11312 US Hwy 49, Gulfport (Orange Grove SC)</strong> appeared on both platforms &mdash; consolidated. &bull; <strong style="color:var(--dom-red)">1025 Hwy 45 Alt, Starkville: 173 days on market</strong> &mdash; stagnant.</div>
+  <table class="tbl" id="tbl-lease">
+    <thead><tr>
+      <th style="width:32px">#</th>
+      <th>Address</th>
+      <th>Type</th>
+      <th>Rate</th>
+      <th>Available SF</th>
+      <th>DOM</th>
+      <th>Source</th>
+      <th style="width:60px">Map</th>
+    </tr></thead>
+    <tbody id="tbody-lease"></tbody>
+  </table>
+</div>
+
+<!-- SALE COMPS -->
+<div id="panel-salecomps" class="panel">
+  <div class="placeholder">
+    <h3>Sale Comps &mdash; CoStar PDF</h3>
+    <p>Comps are available in the weekly CoStar PDF export (June 23, 2026).<br>To automate, set up CoStar scheduled email delivery.</p>
+  </div>
+</div>
+
+<!-- LEASE COMPS -->
+<div id="panel-leasecomps" class="panel">
+  <div class="placeholder">
+    <h3>Lease Comps &mdash; CoStar PDF</h3>
+    <p>Comps are available in the weekly CoStar PDF export.<br>To automate, set up CoStar scheduled email delivery.</p>
+  </div>
+</div>
+
+<!-- CREXI -->
+<div id="panel-crexi" class="panel">
+  <div class="placeholder">
+    <h3 style="color:#1a7a4a">Crexi &mdash; Claude in Chrome</h3>
+    <p>Ensure the Claude in Chrome extension is active, then ask Claude to pull Crexi listings.<br>Or browse manually:<br>
+    <a href="https://www.crexi.com/properties?activationPeriod=SevenDays&placeIds[]=ChIJGdRK5OQyKIYR2qbc6X8XDWI&sort=New+Listings&pageSize=60" target="_blank">&rarr; Crexi For Sale (Mississippi, last 7 days)</a><br>
+    <a href="https://www.crexi.com/lease/properties?showMap=false&activationPeriod=SevenDays&placeIds[]=ChIJGdRK5OQyKIYR2qbc6X8XDWI&pageSize=60" target="_blank">&rarr; Crexi For Lease (Mississippi, last 7 days)</a></p>
+  </div>
+</div>
+
+<!-- MLS -->
+<div id="panel-mls" class="panel">
+  <div class="placeholder">
+    <h3 style="color:#8b5e1a">MLS United (FlexMLS)</h3>
+    <p>Open the Active Listings and Closed Comps links in your browser (update the date to the previous Monday), then tell Claude the tabs are open.</p>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// DEFAULT DATA
+// ─────────────────────────────────────────
+const DEFAULT = {
+  forSale: [
+    {id:"fs1",address:"2872 Mattox St",city:"Tupelo, MS 38801 · Tupelo/North",type:"Industrial / Warehouse",price:"$1,790,000",size:"80,700 SF / 3.00 AC",capRate:"",dom:1,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com/properties?q=2872+mattox+st+tupelo+ms",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=2872+Mattox+St+Tupelo+MS",notes:"$22.18/SF · Investment or Owner User · Deferred Maintenance · Built 1976/Reno 2000 · Clear Ht 14' · 4 docks/3 drive-ins · $2.00/SF/yr MG lease rate · 100% vacant"},
+    {id:"fs2",address:"4033 Fountain Ln",city:"Horn Lake, MS 38637 · DeSoto County",type:"Office — NNN Investment",price:"$3,545,451",size:"4,503 SF / 1.04 AC",capRate:"5.7%",dom:1,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com/properties?q=4033+fountain+ln+horn+lake+ms",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=4033+Fountain+Ln+Horn+Lake+MS",notes:"$787.35/SF · Heartland Dental NNN · Built 2024 · Tenant: Jan 2024–Jan 2036 · 34 spaces · Memphis Intl 22 min"},
+    {id:"fs3",address:"3210 Highway 15 N",city:"Laurel, MS 39440 · Hattiesburg/South",type:"Office — Government NNN",price:"$2,079,000",size:"8,876 SF / 1.30 AC",capRate:"8.1%",dom:3,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com/properties?q=3210+highway+15+n+laurel+ms",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=3210+Highway+15+N+Laurel+MS",notes:"$234.23/SF · Social Security Admin (GSA Region 4) · 8,846 SF · 59 employees · Built 2011 · Seller: Sturncor Investment Group (334) 792-6751"},
+    {id:"fs4",address:"2885–2889 South Lamar Blvd",city:"Oxford, MS 38655 · Tupelo/North",type:"Healthcare",price:"$4,100,000",size:"21,025 SF / 2.51 AC",capRate:"8.1%",dom:4,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com/properties?q=2885+south+lamar+blvd+oxford+ms",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=2885+South+Lamar+Blvd+Oxford+MS",notes:"$195.01/SF · Built 1991/Reno 2022 · Zoning SCO · 60 surface spaces · 1 story"},
+    {id:"fs5",address:"5891 US Hwy 49 — Hattiesburg Commons",city:"Hattiesburg, MS 39402 · Forrest County",type:"Retail — Strip Center",price:"$3,500,000",size:"13,550 SF / 1.18 AC",capRate:"7.5%",dom:5,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com/properties?q=5891+us+highway+49+hattiesburg+ms",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=5891+US+Hwy+49+Hattiesburg+MS",notes:"$258.30/SF · 10 tenants: Harrison Finance, Sally Beauty, UPS Store, Metro by T-Mobile · 232' frontage US-49 · 61 spaces · Built 2001"},
+    {id:"fs6",address:"19609 & 19617 US-Highway 82",city:"Carrollton, MS 38917 · Carroll County",type:"Retail + Specialty (2 Props)",price:"$485,000 combined",size:"1,554 + 1,702 SF",capRate:"",dom:6,domLabel:"",source:"Both",costarUrl:"https://www.costar.com",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=19609+US-82+Carrollton+MS",notes:"19609: 82 Liquor Store $300K (2 AC, Built 1996, business value included, inventory sold separately) · 19617: 4-Bay Car Wash $185K (1 AC, Built 1998, vacant) · Seller: Tiffany Hodges McCaleb, Powers Properties (662) 374-4428"},
+    {id:"fs7",address:"1924 30th Ave",city:"Gulfport, MS 39501 · Harrison County",type:"Healthcare",price:"$350,000",size:"3,896 SF / 0.25 AC",capRate:"9.2%",dom:6,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=1924+30th+Ave+Gulfport+MS",notes:"$89.84/SF · Tenant: Williams Tax Service 2,000 SF (Jan 2015) · Built 1968/Reno 2021 · 14 spaces · Gulfport-Biloxi Airport 13 min"},
+    {id:"fs8",address:"2403 Eden St — Edenwood Apartments",city:"Pascagoula, MS 39581 · Jackson County",type:"Multifamily — 52 Units",price:"$4,940,000",size:"100,620 SF / 3.29 AC",capRate:"",dom:6,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=2403+Eden+St+Pascagoula+MS",notes:"$95,000/unit · $49.10/SF · Built 2003 · Avg rent $680 · Mix: 2BR/2BA (24 units), 3BR/2BA (28 units) · Prior sale $2.3M Oct 2021 · (228) 762-2057"},
+    {id:"fs9",address:"325 Clinton Blvd",city:"Clinton, MS 39056 · Hinds County",type:"Retail — Freestanding",price:"$225,900",size:"1,840–2,115 SF / 0.24 AC",capRate:"",dom:6,domLabel:"",source:"Both",costarUrl:"https://www.costar.com",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=325+Clinton+Blvd+Clinton+MS",notes:"$106–122/SF · Tenant: Shannon's TLC (Sep 2007) · Built 1970 · Zoning CBC · 5 surface spaces · 43' frontage · Moody's ID: 45094382 · Seller: Jeff Speed, Speed Commercial RE (601) 987-0202"},
+    {id:"fs10",address:"7501–7509 Goodman Rd — Village Shops of Crumpler Place",city:"Olive Branch, MS 38654 · DeSoto County",type:"Retail — Community Center NNN",price:"$6,644,580",size:"30,269 SF / 7.00 AC",capRate:"7.5%",dom:6,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=7501+Goodman+Rd+Olive+Branch+MS",notes:"$219.52/SF · 7 tenants: Petco (12,500 SF), Panera (4,098 SF), T-Mobile, Palm Beach Tan · 200 spaces · Traffic 34,314 VPD · Built 2002 · Prior sale $5.9M (2018)"},
+    {id:"fs11",address:"2718 Bartlett Ave — Bartlett Bayou",city:"Pascagoula, MS 39567 · Jackson County",type:"Multifamily — 48 Units",price:"$4,560,000",size:"57,848 SF / 3.91 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=2718+Bartlett+Ave+Pascagoula+MS",notes:"$95,000/unit · 6.25% vacancy · Avg rent $798 · Built 2005 · 7 buildings · Mix: 1BR (8 units $692), 2BR (12 units $819), 3BR (28 units $820) · Seller: Thomas M Lucas (310) 925-8075"},
+    {id:"fs12",address:"112 W Jackson St — Old Town Place",city:"Ridgeland, MS 39157 · Madison County",type:"Land — Mixed Use / Commercial",price:"$900,000",size:"0.66 AC",capRate:"",dom:7,domLabel:"",source:"Both",costarUrl:"https://www.costar.com",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=112+W+Jackson+St+Ridgeland+MS",notes:"$1.36M/AC · Zoning MU-1 · 137' frontage on Jackson St · Traffic 29,007 VPD · All utilities available · Moody's ID: 45085286 · Seller: Sam Cox, Pinpoint Commercial RE (601) 383-3733"},
+    {id:"fs13",address:"124 Court St",city:"Bay Saint Louis, MS 39520 · Hancock County",type:"Office — Condos (6 units)",price:"$389,000–$599,900",size:"752–1,327 SF each (9,025 total)",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=124+Court+St+Bay+Saint+Louis+MS",notes:"$451–$589/SF · 6 condos for sale individually · Built 1918 (historic) · 0.67 AC · Gulfport-Biloxi Airport 39 min"},
+    {id:"fs14",address:"2561 Pass Rd",city:"Biloxi, MS 39531 · Harrison County",type:"Office",price:"$1,100,000",size:"8,992 SF / 0.80 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=2561+Pass+Rd+Biloxi+MS",notes:"$122.33/SF · Tenant: Port City Cafe 2 (4,048 SF, Nov 2012) · Built 1995 · 2 stories · 45 spaces · Prior sale $515K (2019, 7.7% cap)"},
+    {id:"fs15",address:"341 US-90 — The Klein Building",city:"Gautier, MS 39553 · Jackson County",type:"Office",price:"$575,000",size:"8,442 SF / 0.55 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=341+US-90+Gautier+MS",notes:"$68.11/SF · Tenant: Evolve 2,360 SF (Oct 2025–Oct 2028) · Built 1984 · 2 stories · 10 spaces + covered · Traffic 34,680 VPD · Prior sale $235K (Dec 2020)"},
+    {id:"fs16",address:"239 Hartfield Rd — Angel's Cove Apartments",city:"Hattiesburg, MS 39402 · Lamar County",type:"Multifamily — 20 Units (Fully Renovated)",price:"$2,150,000",size:"19,700 SF / 0.47 AC",capRate:"",dom:12,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=239+Hartfield+Rd+Hattiesburg+MS",notes:"★ NAI UCR Own Listing · $107,500/unit · All 3BR/1BA (985 SF avg) · Built 2001 · 6 buildings · $500K+ CapEx (Q3 2025) · New LVP flooring, stainless appliances, water heaters · Moody's ID: 45077427"},
+    {id:"fs17",address:"3304 Trinity Dr",city:"Moss Point, MS 39562 · Jackson County",type:"Industrial",price:"$6,900,000",size:"65,300 SF / 197.4 AC",capRate:"",dom:8,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=3304+Trinity+Dr+Moss+Point+MS",notes:"$105.67/SF · Built 1982 · Owner: Bollinger Mississippi · Broker: Jordan Johnson, Beau Box Commercial RE (504) 323-3416 · Moody's ID: 45076270"},
+    {id:"fs18",address:"5801 Elder Ferry Rd",city:"Moss Point, MS 39563 · Jackson County · OZ",type:"Industrial — Warehouse/Distribution",price:"$4,950,000",size:"51,065 SF / 56.53 AC",capRate:"",dom:8,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=5801+Elder+Ferry+Rd+Moss+Point+MS",notes:"$96.94/SF · 3 buildings · 2 grade doors · Opportunity Zone · Brokers: Jordan Johnson / Beau Box (504) 323-3416 · Moody's ID: 45076401"},
+    {id:"fs19",address:"24101 Spyder Dr",city:"Pass Christian, MS 39571 · Harrison County",type:"Industrial — For Sale + For Lease",price:"$2,300,000 / $5.00 NNN",size:"35,800 SF / 11.4 AC",capRate:"",dom:8,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=24101+Spyder+Dr+Pass+Christian+MS",notes:"Also listed for lease at $14,917/mo · 2 buildings · Clear Ht 15' · 2 dock-high + 7 grade doors · Vacant · Broker: Beau Box (225) 237-3343 · Moody's IDs: 45073932 / 45073962"},
+    {id:"fs20",address:"I-10 & Firetower Rd",city:"Pass Christian, MS 39571 · Harrison County",type:"Land — 140 Acres",price:"$91,476,000",size:"140 AC",capRate:"",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=I-10+Firetower+Rd+Pass+Christian+MS",notes:"$653,400/AC ($2–$15/SF range) · Owner: Buc-ee's Harrison LLC · Water & Sewer available · Broker: Beau Box (225) 237-3343 · Moody's ID: 45090640"},
+    {id:"fs21",address:"Market St — Downtown Commercial",city:"Pascagoula, MS 39567 · Jackson County · OZ",type:"Retail — Downtown Opportunity Zone",price:"$399,000",size:"4,289–4,673 SF / 0.31 AC",capRate:"",dom:5,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=Market+St+Pascagoula+MS",notes:"$93.03/SF · Built 1964 · Zoning CC (Community Commercial) · Masonry · Occupied · Seller: Joselyne Ridings · Moody's ID: 45093739"},
+    {id:"fs22",address:"Airport Rd Land",city:"Greenwood, MS 38930 · Leflore County",type:"Land — 42 Acres",price:"$160,000",size:"42 AC",capRate:"",dom:5,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=Airport+Rd+Greenwood+MS",notes:"$3,810/AC · Features: 10 AC duck hole, hardwoods · Seller: Anthony Steen, Tom Smith Land (601) 898-2772 · Moody's ID: 45100835"},
+    {id:"fs23",address:"4155 Sterling Lane",city:"Liberty, MS 39645 · Amite County",type:"Land — 15 Acres",price:"$99,000",size:"15 AC",capRate:"",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=4155+Sterling+Lane+Liberty+MS",notes:"$6,600/AC · Pond, privacy, hunting · Seller: Slade Priest, United Country Southern States (601) 888-0094 · Moody's ID: 45094157"},
+    {id:"fs24",address:"S of State Hwy 48",city:"Centreville, MS 39631 · Amite County",type:"Land — 80 Acres (Hunting/Timber)",price:"$320,000",size:"80 AC",capRate:"",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"",notes:"$4,000/AC · Hunting / Recreational use · Seller: Caleb Breaux (985) 209-4125 · Moody's ID: 45094100"},
+    {id:"fs25",address:"2066 Evelyn Gandy Pky",city:"Hattiesburg, MS 39401 · Forrest County",type:"Land — C1 Commercial",price:"$699,900",size:"3.88 AC (2 lots)",capRate:"",dom:1,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$180,386/AC · 573' frontage on Linda Drive · Zoning C1 Commercial"},
+    {id:"fs26",address:"Hwy 98 & Lamar Blvd — Hattiesburg Marketplace",city:"Hattiesburg, MS 39402 · Lamar County",type:"Land — B-5 Regional Commercial",price:"Price Withheld",size:"13.44 AC",capRate:"",dom:3,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"Ground lease options available · 665' on US-98 · Traffic: 52,891 VPD Hardy St · Zoning B-5 Regional Business"},
+    {id:"fs27",address:"3AC Old Highway 63",city:"Lucedale, MS 39452 · George County",type:"Land — C2 Highway Commercial",price:"$1,350,000",size:"3 AC",capRate:"",dom:6,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$450,000/AC · Frontage on Old Hwy 63S · Zoning C2 Highway Commercial"},
+    {id:"fs28",address:"Hwy 49 & Duckworth Rd",city:"Gulfport, MS 39503 · Harrison County",type:"Land — B-4 Highway Commercial",price:"$649,000",size:"3.72 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$174,462/AC · 421' Hwy 49 frontage · Proposed: Office, Retail · Zoning B-4"},
+    {id:"fs29",address:"4212 Gautier Vancleave Rd",city:"Gautier, MS 39553 · Jackson County",type:"Land — C2 Commercial",price:"$400,000",size:"4.90 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$81,632/AC · Previously developed · No utilities on-site · Zoning C-2 Community Commercial · Owner: Macfarland Delores (228) 497-2733"},
+    {id:"fs30",address:"118 Hwy 309 S — Thistledome Inn B&B",city:"Byhalia, MS 38611 · Marshall County",type:"Specialty — Bed & Breakfast",price:"$775,000",size:"6,992 SF / 4.10 AC",capRate:"",dom:5,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$110.84/SF · Built 1840 · 2 stories · Owner User or Investment"},
+    {id:"fs31",address:"1411 MS-15",city:"Ellisville, MS 39437 · Jones County",type:"Flex",price:"$200,000",size:"4,800 SF / 0.95 AC",capRate:"",dom:7,domLabel:"",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"",notes:"$41.67/SF · Built 1980/Reno 2021"},
+    {id:"fs32",address:"901 West Pine St — Brittany Arms",city:"Hattiesburg, MS 39401 · Forrest County",type:"Multifamily — 40 Units",price:"Negotiable",size:"26,912 SF / 1.22 AC",capRate:"",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"",notes:"40 units · 4 buildings · Built 1967 · Partial reno · Value-add opportunity · Broker: Brian Savage, Colliers Birmingham (205) 949-2704 · Moody's ID: 45093404"},
+    {id:"fs33",address:"1025 Hwy 45 Alt — Premier Industrial",city:"Starkville, MS 39759 · Lowndes County",type:"Industrial — Opportunity Zone",price:"Negotiable",size:"6.4 AC",capRate:"",dom:65,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"",notes:"Opportunity Zone · 65 days on market (amber/watch) · Broker: Sam Cox, Pinpoint Commercial RE (601) 383-3733 · Moody's ID: 45109469"},
+    {id:"fs34",address:"Highland Parkway Land",city:"Picayune, MS 39466 · Pearl River County · OZ",type:"Land — C-1 Commercial",price:"$445,000",size:"5.6 AC",capRate:"",dom:7,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"",notes:"$79,464/AC · Zoning C-1 · Water & Sewer available · Opportunity Zone · Broker: Beau Box (225) 237-3343 · Moody's ID: 45083064"},
+    {id:"fs35",address:"4 Drake Landing",city:"Raymond, MS 39154 · Hinds County",type:"Land — Rural",price:"$17,000",size:"0.63 AC",capRate:"",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"",notes:"$27,113/AC · Seller: Hayden Clark, Beau Box (225) 223-7990 · Moody's ID: 45090557"}
+  ],
+  forLease: [
+    {id:"fl1",address:"1000 Highland Colony Pky — Renaissance at Colony Park",city:"Ridgeland, MS 39157 · Madison/Ridgeland",type:"Retail — Lifestyle Center",price:"$32.00/SF/yr NNN",size:"10–54,242 SF (16 spaces)",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=1000+Highland+Colony+Pkwy+Ridgeland+MS",notes:"98.2% leased · 575,000 SF total · Max contiguous 17,914 SF · 1,200 spaces · Traffic 92,910 VPD · Anchors: Malco Theatres (30K), Fresh Market (20K), Regus (12K) · Broker: Philip Holman, Mattiacci Co. (601) 291-0942"},
+    {id:"fl2",address:"185 Country Place Pky",city:"Pearl, MS 39208 · Brandon/Flowood/Pearl",type:"Flex — Class A Showroom/Warehouse",price:"$14.00/SF/yr MG",size:"4,532 SF",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=185+Country+Place+Pky+Pearl+MS",notes:"Available July 2026 · 5-year term · Clear Ht 14'6\"–17'4\" · 2 drive-ins (14'x12' roll-up) · Built 2021 · 54 spaces · I-20 visibility · Brokers: Amanda Principe Overby CCIM / Scott Overby (601) 624-4611 / (601) 624-8511"},
+    {id:"fl3",address:"11312 Highway 49 — Orange Grove Shopping Center",city:"Gulfport, MS 39503 · Harrison County",type:"Retail — Neighborhood Center + Sublease",price:"$5.50/SF/yr NNN",size:"1,020–25,082 SF direct + 24,062 SF sublease",dom:6,domLabel:"",source:"Both",costarUrl:"https://www.costar.com",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=11312+Highway+49+Gulfport+MS",notes:"GLA 110,438 SF · 99.1% leased · Built 1964/Reno 1995 · 375 spaces · 733' frontage · 95 AC · Tenants: Dirt Cheap (30,170 SF), Keystone Auto (15K), Citi Trends (8K) · Brokers: Monte Luffey / Tim Carlson, SE Commercial RE (228) 276-2701 · Moody's ID: 45090867"},
+    {id:"fl4",address:"7684 Airways Blvd — Memphis Neurology",city:"Southaven, MS 38671 · DeSoto County",type:"Office / Medical",price:"Rate Withheld",size:"5,457 SF",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=7684+Airways+Blvd+Southaven+MS",notes:"Available July 2026 · Currently 100% occupied · Built 2009 · 40 spaces (7.33/1K SF) · Memphis Intl 15 min · Broker: Dede Malmo CCIM, Malmo Memphis RE (901) 230-5549"},
+    {id:"fl5",address:"775–975 E Goodman Rd — Southaven Commons",city:"Southaven, MS 38671 · DeSoto County",type:"Retail — Community Center (Grocery Anchored)",price:"Rate Withheld",size:"1,203–5,425 SF (3 spaces)",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=775+E+Goodman+Rd+Southaven+MS",notes:"30-day occupancy · 100% leased · GLA 104,845 SF · 733 spaces · Traffic 38,000 VPD · Anchor: Superlo Foods, McAlister's Deli, Fantastic Sams · Brokers: Dustin Jones / Carson Kane, Jones Aur Commercial RE (901) 581-5049"},
+    {id:"fl6",address:"3055 US-80 — Pro Business Centers",city:"Pearl, MS 39208 · Rankin County",type:"Retail",price:"$12.00/SF + Electric",size:"501–1,000 SF",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=3055+US-80+Pearl+MS",notes:"1-year minimum term · GLA 75,000 SF · 98.7% leased · Built 1980/Reno 2025 · Traffic 29,158 VPD · Broker: Hishaam Shafiq, Pro Business Centers (813) 260-0140"},
+    {id:"fl7",address:"114 W Market St",city:"Greenwood, MS 38930 · Leflore County",type:"Office — Historic Downtown",price:"$6.48/SF/yr MG",size:"1,250–2,525 SF (2 spaces)",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=114+W+Market+St+Greenwood+MS",notes:"100% vacant · 1–2 year term · Built 1900 (renovated) · Zoning C-2 · Brick facade, large display windows · Ideal: coffee, cafe, boutique, gallery, office · 4 reserved spaces · Broker: Pam Powers, Powers Properties (601) 831-4505"},
+    {id:"fl8",address:"3291 Warrior Dr (Multiple Units)",city:"D'Iberville, MS 39540 · Harrison County",type:"Flex / Light Distribution",price:"$12.00/SF/yr NNN",size:"2,250–5,000 SF per unit",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=3291+Warrior+Dr+Diberville+MS",notes:"Units: Seymour I&J (4,908 SF), 3291G (2,250 SF), 3272 A-B (5,000 SF), 3283A (2,500 SF) · 1-year term · Brokers: Monte Luffey / Tim Carlson (228) 276-2701"},
+    {id:"fl9",address:"14289 Pine Ridge Rd",city:"Ocean Springs, MS 39565 · Jackson County",type:"Flex — NNN",price:"$12.00/SF/yr NNN",size:"2,708–8,125 SF",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=14289+Pine+Ridge+Rd+Ocean+Springs+MS",notes:"Built 2024 · 5 AC lot · Brokers: Monte Luffey / Tim Carlson (228) 276-2701"},
+    {id:"fl10",address:"123 W Northside Dr",city:"Jackson, MS 39206 · North Jackson",type:"Retail",price:"Rate Withheld",size:"1,000 SF",dom:0,domLabel:"New",source:"CoStar",costarUrl:"https://www.costar.com",moodysUrl:"",mapUrl:"https://www.google.com/maps/search/?q=123+W+Northside+Dr+Jackson+MS",notes:"Vacant · 75.8% leased center · Built 2014 · 1.22 AC · Broker: Rogelio Rodriguez, DMG Rentals (601) 988-8703"},
+    {id:"fl11",address:"280 Eisenhower Dr — 4 Suites",city:"Biloxi, MS 39531 · Harrison County",type:"Retail — Neighborhood Center (4 Suites)",price:"$12.00–$17.00/SF/yr NNN",size:"34,120 SF total (4 suites)",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=280+Eisenhower+Dr+Biloxi+MS",notes:"Suite 1: 15,000 SF @ $15 NNN ($18,750/mo) · Suite 2A: 14,100 SF @ $12 NNN ($14,100/mo) · Suite 5: 3,220 SF @ $17 NNN ($4,562/mo) · Suite 4: 1,800 SF @ $17 NNN ($2,550/mo) · GLA 59,535 SF · 11.14 AC · Built 1978 · Broker: Jonathan Fawer, Corporate Realty (504) 616-4042"},
+    {id:"fl12",address:"246 N Pearson Rd (2193 Hwy 80 E)",city:"Pearl, MS 39208 · Rankin County · OZ",type:"Industrial — Warehouse/Distribution",price:"Rate Negotiable",size:"18,000 SF (2 buildings)",dom:22,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=2193+Highway+80+E+Pearl+MS",notes:"Grade-level loading · 9 grade doors · Steel construction · Built 1970 · 10.04 AC · Access: Hwy 80, US 49, I-20, I-55 · Broker: Rob Carpenter, Carpenter Properties (601) 957-1001 · Moody's ID: 45087121"},
+    {id:"fl13",address:"1601 Hardy St — Uptown Hattiesburg",city:"Hattiesburg, MS 39401 · Forrest County",type:"Retail — Freestanding NNN",price:"$8,950/month NNN",size:"15,000 SF",dom:5,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=1601+Hardy+St+Hattiesburg+MS",notes:"Building: 8,924 SF + mezzanine + warehouse · Currently occupied (Vaporized Dist.) · 0.35 AC · Framed construction · Broker: Andy Stetelman, London & Stetelman (601) 268-8770 · Moody's ID: 45098249"},
+    {id:"fl14",address:"3652 Hwy 49 N — 4,000 SF Bldg/4 Offices",city:"Collins, MS 39428 · Covington County",type:"Retail / Mixed Use",price:"$2,000/month",size:"4,000 SF",dom:6,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=3652+Hwy+49+N+Collins+MS",notes:"4 offices + shop area · Built 1985 · 1.55 AC · Potential uses: Auto Sales, Office/Warehouse, Distribution · Broker: Joseph Tubb, Cook Commercial Properties (601) 606-1900 · Moody's ID: 45094160"},
+    {id:"fl15",address:"4611 Terry Road — Elton Place Shopping Center",city:"Jackson, MS 39212 · Hinds County",type:"Retail — Strip Center (2 Suites)",price:"$9.00/SF/yr Modified Gross",size:"Suite C: 800 SF / Suite E: 1,200 SF",dom:7,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=4611+Terry+Road+Jackson+MS",notes:"Suite C: $600/mo · Suite E: $900/mo · GLA 16,688 SF · 7.42 AC · Multi-tenant masonry · Broker: Brian E. Estes CCIM, Estes Bush Real Estate (601) 362-9633"},
+    {id:"fl16",address:"1025 HWY 45 N ALT — Premier Starkville Industrial",city:"Starkville, MS 39759 · Lowndes County · OZ",type:"Industrial — NNN ⚠ STAGNANT",price:"$5.25/SF/yr NNN",size:"60,093 SF",dom:173,domLabel:"",source:"Moodys",costarUrl:"",moodysUrl:"https://moodysnpd.com",mapUrl:"https://www.google.com/maps/search/?q=1025+Hwy+45+Alt+Starkville+MS",notes:"⚠ 173 DAYS ON MARKET — STAGNANT · Listed since Jan 1, 2026 · $26,291/month · Clear Ht 34' · 5 dock-high · 6.4 AC · OZ · Broker: Sam Cox, Pinpoint Commercial RE (601) 383-3733 · Moody's ID: 45109394"}
+  ]
+};
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+const STORAGE_KEY = "ucr_s6_v1";
+let appData = { forSale: [], forLease: [] };
+let expandedId = null;
+let activeTab = "sale";
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+function ea(s) { // escape for HTML attribute value
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function eh(s) { // escape for HTML content
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function domCls(dom) {
+  if (dom < 14) return "dom-g";
+  if (dom <= 90) return "dom-a";
+  return "dom-r";
+}
+function domLbl(item) {
+  if (item.domLabel) return item.domLabel;
+  if (item.dom === 0) return "New";
+  return item.dom + (item.dom === 1 ? " Day" : " Days");
+}
+function srcHtml(src, csUrl, mdUrl) {
+  if (src === "Both") {
+    const cl = csUrl ? ` href="${ea(csUrl)}" target="_blank"` : "";
+    const ml = mdUrl ? ` href="${ea(mdUrl)}" target="_blank"` : "";
+    return `<a class="src-badge src-cs"${cl}>CoStar ↗</a> <a class="src-badge src-md"${ml}>Moody's ↗</a>`;
+  }
+  if (src === "CoStar") {
+    const l = csUrl ? ` href="${ea(csUrl)}" target="_blank"` : "";
+    return `<a class="src-badge src-cs"${l}>CoStar ↗</a>`;
+  }
+  if (src === "Moodys") {
+    const l = mdUrl ? ` href="${ea(mdUrl)}" target="_blank"` : "";
+    return `<a class="src-badge src-md"${l}>Moody's ↗</a>`;
+  }
+  if (src === "NAI") return `<span class="src-badge src-nai">★ NAI UCR</span>`;
+  return src;
+}
+
+// ─────────────────────────────────────────
+// PERSISTENCE
+// ─────────────────────────────────────────
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  const t = new Date();
+  document.getElementById("syncTxt").textContent =
+    "Synced " + t.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { appData = JSON.parse(raw); return true; } catch(e) {}
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────
+function renderAll() {
+  renderTable("sale");
+  renderTable("lease");
+  updateCounts();
+}
+
+function renderTable(tab) {
+  const items = tab === "sale" ? appData.forSale : appData.forLease;
+  const tbody = document.getElementById("tbody-" + tab);
+  tbody.innerHTML = "";
+
+  items.forEach(function(item, i) {
+    const dc = domCls(item.dom);
+    const dl = domLbl(item);
+    const isExp = expandedId === item.id;
+
+    // Main row
+    const tr = document.createElement("tr");
+    tr.className = "data-row" + (isExp ? " expanded" : "");
+    tr.id = "row-" + item.id;
+
+    if (tab === "sale") {
+      tr.innerHTML =
+        "<td class='row-num'>" + (i+1) + "</td>" +
+        "<td onclick=\"toggle('" + item.id + "','" + tab + "')\">" +
+          "<span class='chevron'>&#9660;</span>" +
+          "<div class='addr-main'>" + eh(item.address) + "</div>" +
+          "<div class='addr-sub'>" + eh(item.city) + "</div></td>" +
+        "<td><span class='type-badge'>" + eh(item.type) + "</span></td>" +
+        "<td class='price-cell'>" + eh(item.price) + "</td>" +
+        "<td style='color:#555;font-size:12px'>" + eh(item.size||"—") + "</td>" +
+        "<td style='color:#555;font-size:12px'>" + eh(item.capRate||"—") + "</td>" +
+        "<td><span class='dom-badge " + dc + "'>" + dl + "</span></td>" +
+        "<td>" + srcHtml(item.source, item.costarUrl, item.moodysUrl) + "</td>" +
+        "<td>" + (item.mapUrl ? "<a href='" + ea(item.mapUrl) + "' target='_blank' class='map-lnk' onclick='event.stopPropagation()'>&#128205;</a>" : "—") + "</td>";
+    } else {
+      tr.innerHTML =
+        "<td class='row-num'>" + (i+1) + "</td>" +
+        "<td onclick=\"toggle('" + item.id + "','" + tab + "')\">" +
+          "<span class='chevron'>&#9660;</span>" +
+          "<div class='addr-main'>" + eh(item.address) + "</div>" +
+          "<div class='addr-sub'>" + eh(item.city) + "</div></td>" +
+        "<td><span class='type-badge'>" + eh(item.type) + "</span></td>" +
+        "<td class='price-cell'>" + eh(item.price) + "</td>" +
+        "<td style='color:#555;font-size:12px'>" + eh(item.size||"—") + "</td>" +
+        "<td><span class='dom-badge " + dc + "'>" + dl + "</span></td>" +
+        "<td>" + srcHtml(item.source, item.costarUrl, item.moodysUrl) + "</td>" +
+        "<td>" + (item.mapUrl ? "<a href='" + ea(item.mapUrl) + "' target='_blank' class='map-lnk' onclick='event.stopPropagation()'>&#128205;</a>" : "—") + "</td>";
+    }
+    tbody.appendChild(tr);
+
+    // Expand row
+    if (isExp) {
+      const exTr = document.createElement("tr");
+      exTr.className = "expand-row";
+      exTr.id = "exp-" + item.id;
+      const cols = tab === "sale" ? 9 : 8;
+      const priceLbl = tab === "sale" ? "Asking Price" : "Asking Rate";
+      const sizeLbl  = tab === "sale" ? "Building / Land Size" : "Available SF";
+
+      exTr.innerHTML = "<td colspan='" + cols + "' class='expand-td'><div class='expand-content'>" +
+        "<div class='expand-fields'>" +
+          "<div class='fg'><label class='fl'>Street Address</label><input class='fi' id='e-addr-" + item.id + "' value=\"" + ea(item.address) + "\"></div>" +
+          "<div class='fg'><label class='fl'>City / State / Zip</label><input class='fi' id='e-city-" + item.id + "' value=\"" + ea(item.city) + "\"></div>" +
+          "<div class='fg'><label class='fl'>Property Type</label><input class='fi' id='e-type-" + item.id + "' value=\"" + ea(item.type) + "\"></div>" +
+          "<div class='fg'><label class='fl'>" + priceLbl + "</label><input class='fi' id='e-price-" + item.id + "' value=\"" + ea(item.price) + "\"></div>" +
+          "<div class='fg'><label class='fl'>" + sizeLbl + "</label><input class='fi' id='e-size-" + item.id + "' value=\"" + ea(item.size||"") + "\"></div>" +
+          (tab === "sale" ? "<div class='fg'><label class='fl'>Cap Rate</label><input class='fi' id='e-cap-" + item.id + "' value=\"" + ea(item.capRate||"") + "\"></div>" : "") +
+          "<div class='fg'><label class='fl'>Days on Market</label><input class='fi' type='number' id='e-dom-" + item.id + "' value='" + item.dom + "'></div>" +
+          "<div class='fg'><label class='fl'>DOM Label (optional)</label><input class='fi' id='e-domLbl-" + item.id + "' value=\"" + ea(item.domLabel||"") + "\" placeholder='e.g. New'></div>" +
+          "<div class='fg'><label class='fl'>Source</label><select class='fi' id='e-src-" + item.id + "'>" +
+            "<option value='CoStar'" + (item.source==="CoStar"?" selected":"") + ">CoStar</option>" +
+            "<option value='Moodys'" + (item.source==="Moodys"?" selected":"") + ">Moody's</option>" +
+            "<option value='Both'" + (item.source==="Both"?" selected":"") + ">Both (CoStar + Moody's)</option>" +
+            "<option value='NAI'" + (item.source==="NAI"?" selected":"") + ">NAI UCR Own Listing</option>" +
+          "</select></div>" +
+          "<div class='fg'><label class='fl'>CoStar URL</label><input class='fi' id='e-csurl-" + item.id + "' value=\"" + ea(item.costarUrl||"") + "\"></div>" +
+          "<div class='fg'><label class='fl'>Moody's URL</label><input class='fi' id='e-mdurl-" + item.id + "' value=\"" + ea(item.moodysUrl||"") + "\"></div>" +
+          "<div class='fg'><label class='fl'>Google Maps URL</label><input class='fi' id='e-map-" + item.id + "' value=\"" + ea(item.mapUrl||"") + "\"></div>" +
+          "<div class='fg full'><label class='fl'>Notes</label><textarea class='fi' id='e-notes-" + item.id + "'>" + eh(item.notes||"") + "</textarea></div>" +
+        "</div>" +
+        "<div class='expand-actions'>" +
+          "<button class='btn-del' onclick=\"delProp('" + item.id + "','" + tab + "')\">Delete</button>" +
+          "<button class='btn-cancel-e' onclick='cancelEdit()'>Cancel</button>" +
+          "<button class='btn-save' onclick=\"saveProp('" + item.id + "','" + tab + "')\">Save Changes</button>" +
+        "</div>" +
+        "</div></td>";
+
+      tbody.appendChild(exTr);
+    }
+  });
+}
+
+function updateCounts() {
+  document.getElementById("cnt-sale").textContent = appData.forSale.length;
+  document.getElementById("cnt-lease").textContent = appData.forLease.length;
+}
+
+// ─────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────
+function toggle(id, tab) {
+  expandedId = (expandedId === id) ? null : id;
+  activeTab = tab;
+  renderTable(tab);
+}
+
+function cancelEdit() {
+  expandedId = null;
+  renderTable(activeTab);
+}
+
+function saveProp(id, tab) {
+  const items = tab === "sale" ? appData.forSale : appData.forLease;
+  const item = items.find(function(x){ return x.id === id; });
+  if (!item) return;
+  item.address   = document.getElementById("e-addr-"  + id).value;
+  item.city      = document.getElementById("e-city-"  + id).value;
+  item.type      = document.getElementById("e-type-"  + id).value;
+  item.price     = document.getElementById("e-price-" + id).value;
+  item.size      = document.getElementById("e-size-"  + id).value;
+  if (tab === "sale") item.capRate = document.getElementById("e-cap-" + id).value;
+  item.dom       = parseInt(document.getElementById("e-dom-"  + id).value) || 0;
+  item.domLabel  = document.getElementById("e-domLbl-"+ id).value;
+  item.source    = document.getElementById("e-src-"   + id).value;
+  item.costarUrl = document.getElementById("e-csurl-" + id).value;
+  item.moodysUrl = document.getElementById("e-mdurl-" + id).value;
+  item.mapUrl    = document.getElementById("e-map-"   + id).value;
+  item.notes     = document.getElementById("e-notes-" + id).value;
+  expandedId = null;
+  save();
+  renderTable(tab);
+  updateCounts();
+}
+
+function delProp(id, tab) {
+  if (!confirm("Delete this property?")) return;
+  if (tab === "sale") appData.forSale  = appData.forSale.filter(function(x){ return x.id !== id; });
+  else                appData.forLease = appData.forLease.filter(function(x){ return x.id !== id; });
+  expandedId = null;
+  save();
+  renderTable(tab);
+  updateCounts();
+}
+
+function addProp(tab) {
+  const nid = "new-" + Date.now();
+  const item = {
+    id: nid, address: "New Property Address", city: "City, MS",
+    type: "Commercial", price: "TBD", size: "", capRate: "",
+    dom: 0, domLabel: "New", source: "CoStar",
+    costarUrl: "", moodysUrl: "", mapUrl: "", notes: ""
+  };
+  if (tab === "sale") appData.forSale.unshift(item);
+  else                appData.forLease.unshift(item);
+  expandedId = nid;
+  activeTab = tab;
+  save();
+  renderTable(tab);
+  updateCounts();
+  var el = document.getElementById("tbody-" + tab);
+  if (el) el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+// ─────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────
+function showTab(name, el) {
+  expandedId = null;
+  document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+  document.getElementById("panel-" + name).classList.add("active");
+  el.classList.add("active");
+  activeTab = name;
+}
+
+// ─────────────────────────────────────────
+// SNAPSHOT
+// ─────────────────────────────────────────
+function downloadSnapshot() {
+  const d = new Date().toISOString().slice(0,10);
+  const blob = new Blob([JSON.stringify(appData, null, 2)], {type:"application/json"});
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "UCR_Section6_Snapshot_" + d + ".json"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadSnapshot(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed.forSale && parsed.forLease) {
+        appData = parsed;
+        expandedId = null;
+        save();
+        renderAll();
+        alert("Snapshot loaded: " + parsed.forSale.length + " For Sale, " + parsed.forLease.length + " For Lease.");
+      } else {
+        alert("Invalid snapshot format (missing forSale/forLease arrays).");
+      }
+    } catch(err) {
+      alert("Error loading snapshot: " + err.message);
+    }
+    input.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+function init() {
+  if (!load()) {
+    appData = {
+      forSale:  JSON.parse(JSON.stringify(DEFAULT.forSale)),
+      forLease: JSON.parse(JSON.stringify(DEFAULT.forLease))
+    };
+  }
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
