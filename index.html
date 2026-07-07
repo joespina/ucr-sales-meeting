@@ -426,6 +426,7 @@ tr.dp-selected { background: #EFF6FF !important; }
     <table class="tbl" id="tbl-mls-active">
       <thead><tr>
         <th style="width:32px">#</th>
+        <th style="width:70px">Photo</th>
         <th>Address</th>
         <th>Type</th>
         <th>Price / Rate</th>
@@ -441,6 +442,7 @@ tr.dp-selected { background: #EFF6FF !important; }
     <table class="tbl" id="tbl-mls-closed">
       <thead><tr>
         <th style="width:32px">#</th>
+        <th style="width:70px">Photo</th>
         <th>Address</th>
         <th>Type</th>
         <th>Price / Rate</th>
@@ -995,14 +997,14 @@ const MEETINGS = {
    mapUrl:"https://www.google.com/maps/search/?q=2947+Jefferson+St+Macon+MS", photoUrl:"", notes:"Price Withheld"}
     ],
     mlsActive: [
-      {id:"mla1",mlsNum:"4154983",address:"6500 Baker Road",city:"Ocean Springs",state:"MS",zip:"39564",county:"Jackson County",type:"Industrial",price:"425000",pricePerSF:"74.35",isLease:false,contact:"Justin Britt",office:"Epique",listDate:"July 7, 2026",source:"mls",mapUrl:"",notes:"Also available for lease (MLS #4145746). I-10 frontage."},
-      {id:"mla2",mlsNum:"4154936",address:"305 S Main Street",city:"Yazoo City",state:"MS",zip:"39194",county:"Yazoo County",type:"Business",price:"239000",pricePerSF:"113.81",isLease:false,contact:"Lee Garland",office:"Epique",listDate:"July 6, 2026",source:"mls",mapUrl:"",notes:"Former bar/restaurant with stage, dance floor, kitchen. Package deal with 304 S Main St."},
-      {id:"mla3",mlsNum:"4154940",address:"304 S Main Street",city:"Yazoo City",state:"MS",zip:"39194",county:"Yazoo County",type:"Retail",price:"59000",pricePerSF:"21.52",isLease:false,contact:"Lee Garland",office:"Epique",listDate:"July 6, 2026",source:"mls",mapUrl:"",notes:"Package deal with 305 S Main St (Old Gringo Saloon)."},
-      {id:"mla4",mlsNum:"4154905",address:"525 Mississippi 315",city:"Sardis",state:"MS",zip:"38666",county:"Panola County",type:"Retail",price:"175000",pricePerSF:"0",isLease:false,contact:"William W Wolfe",office:"Big River Properties",listDate:"July 6, 2026",source:"mls",mapUrl:"",notes:"Former Sonic restaurant. Building SF not listed. Sold as-is with equipment."},
-      {id:"mla5",mlsNum:"4154973",address:"359 Towne Center Boulevard, 201",city:"Ridgeland",state:"MS",zip:"39157",county:"Madison County",type:"Office",price:"1044",pricePerSF:"1.17",isLease:true,contact:"Lacy Waters",office:"Overby, Inc.",listDate:"July 7, 2026",source:"mls",mapUrl:"",notes:"Monthly lease rate"}
+      {id:"mla1",mlsNum:"4154983",address:"6500 Baker Road",city:"Ocean Springs",state:"MS",zip:"39564",county:"Jackson County",type:"Industrial",price:"425000",pricePerSF:"74.35",isLease:false,contact:"Justin Britt",office:"Epique",listDate:"July 7, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20260707143638424515000000-o.jpg",notes:"Also available for lease (MLS #4145746). I-10 frontage."},
+      {id:"mla2",mlsNum:"4154936",address:"305 S Main Street",city:"Yazoo City",state:"MS",zip:"39194",county:"Yazoo County",type:"Business",price:"239000",pricePerSF:"113.81",isLease:false,contact:"Lee Garland",office:"Epique",listDate:"July 6, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20260706204658093894000000-o.jpg",notes:"Former bar/restaurant with stage, dance floor, kitchen. Package deal with 304 S Main St."},
+      {id:"mla3",mlsNum:"4154940",address:"304 S Main Street",city:"Yazoo City",state:"MS",zip:"39194",county:"Yazoo County",type:"Retail",price:"59000",pricePerSF:"21.52",isLease:false,contact:"Lee Garland",office:"Epique",listDate:"July 6, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20260706205518668866000000-o.jpg",notes:"Package deal with 305 S Main St (Old Gringo Saloon)."},
+      {id:"mla4",mlsNum:"4154905",address:"525 Mississippi 315",city:"Sardis",state:"MS",zip:"38666",county:"Panola County",type:"Retail",price:"175000",pricePerSF:"0",isLease:false,contact:"William W Wolfe",office:"Big River Properties",listDate:"July 6, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20260706161208872795000000-o.jpg",notes:"Former Sonic restaurant. Building SF not listed. Sold as-is with equipment."},
+      {id:"mla5",mlsNum:"4154973",address:"359 Towne Center Boulevard, 201",city:"Ridgeland",state:"MS",zip:"39157",county:"Madison County",type:"Office",price:"1044",pricePerSF:"1.17",isLease:true,contact:"Lacy Waters",office:"Overby, Inc.",listDate:"July 7, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20260707122211578719000000-o.jpg",notes:"Monthly lease rate"}
     ],
     mlsClosed: [
-      {id:"mlc1",mlsNum:"4127812",address:"513 Liberty Road, 1c",city:"Flowood",state:"MS",zip:"39232",county:"Rankin County",type:"Industrial",price:"1450",pricePerSF:"1.29",isLease:true,contact:"Scott Cote",office:"Lee Hawkins, Realty",closeDate:"July 6, 2026",source:"mls",mapUrl:"",notes:"Monthly lease rate. Office/warehouse space."}
+      {id:"mlc1",mlsNum:"4127812",address:"513 Liberty Road, 1c",city:"Flowood",state:"MS",zip:"39232",county:"Rankin County",type:"Industrial",price:"1450",pricePerSF:"1.29",isLease:true,contact:"Scott Cote",office:"Lee Hawkins, Realty",closeDate:"July 6, 2026",source:"mls",mapUrl:"",photoUrl:"https://cdn.resize.sparkplatform.com/mu/640x480/true/20251006143527375298000000-o.jpg",notes:"Monthly lease rate. Office/warehouse space."}
     ]
   }
   // future weeks get added here by Claude each week
@@ -1359,7 +1361,7 @@ function renderMLSTable(sub) {
   var badge = document.getElementById("mls-" + sub + "-cnt-badge");
   if (badge) { badge.textContent = items.length; badge.style.background = items.length ? (sub === "active" ? "#dcfce7" : "#e0f2fe") : "#eee"; badge.style.color = items.length ? (sub === "active" ? "#166534" : "#075985") : "#999"; }
   if (items.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;color:#999;padding:28px;font-size:13px'>No MLS " + (sub === "active" ? "Active Listings" : "Closed Comps") + " for this week.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;color:#999;padding:28px;font-size:13px'>No MLS " + (sub === "active" ? "Active Listings" : "Closed Comps") + " for this week.</td></tr>";
     return;
   }
   items.forEach(function(item, i) {
@@ -1385,6 +1387,7 @@ function renderMLSTable(sub) {
     var mlsBadge = "<span style='font-size:10px;color:#6B7280;background:#f3f4f6;padding:1px 5px;border-radius:4px'>#" + eh(item.mlsNum) + "</span>";
     tr.innerHTML =
       "<td class='row-num'>" + (i+1) + "</td>" +
+      "<td class='photo-cell'>" + (item.photoUrl ? "<img class='photo-thumb' src='" + ea(item.photoUrl) + "' alt=''>" : "<div class='photo-ph'>&#128247;</div>") + "</td>" +
       "<td><div class='addr-main'>" + eh(item.address) + "</div>" + mlsBadge + "<div class='addr-sub'>" + eh(addrSub) + "</div></td>" +
       "<td><span class='type-badge'>" + eh(item.type) + "</span></td>" +
       "<td class='price-cell'>" + priceDisplay + "</td>" +
