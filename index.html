@@ -26,7 +26,7 @@ body { font-family: 'DM Sans', -apple-system, sans-serif; background: #f0f2f5; c
 /* HEADER */
 .hdr { background: var(--navy); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
 .hdr-left h1 { color: #fff; font-size: 17px; font-weight: 600; letter-spacing: .2px; }
-.hdr-left p { color: rgba(255,255,255,.55); font-size: 11px; margin-top: 2px; }
+.hdr-left p, .hdr-left #meetingSubtitle { color: rgba(255,255,255,.55); font-size: 11px; margin-top: 2px; }
 .hdr-right { display: flex; gap: 8px; align-items: center; }
 .sync-txt { color: rgba(255,255,255,.45); font-size: 11px; margin-right: 4px; }
 .btn { padding: 6px 13px; border: none; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
@@ -251,7 +251,7 @@ tr.dp-selected { background: #EFF6FF !important; }
 <div class="hdr">
   <div class="hdr-left">
     <h1>Section 6 &mdash; Review External Listings</h1>
-    <p id="meetingSubtitle">NAI UCR Properties &bull; Weekly Sales Meeting &bull; <span id="meetingDropdownBtn" style="position:relative;display:inline-block"><button onclick="toggleMeetingDropdown()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:6px;color:white;padding:2px 10px 2px 8px;cursor:pointer;font-size:inherit;font-family:inherit"><span id="meetingLabel">July 1, 2026</span> &#9660;</button><div id="meetingDropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;min-width:180px;overflow:hidden"></div></span></p>
+    <div id="meetingSubtitle">NAI UCR Properties &bull; Weekly Sales Meeting &bull; <div id="meetingDropdownBtn" style="position:relative;display:inline-block"><button onclick="toggleMeetingDropdown()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:6px;color:white;padding:2px 10px 2px 8px;cursor:pointer;font-size:inherit;font-family:inherit"><span id="meetingLabel">July 1, 2026</span> &#9660;</button><div id="meetingDropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;min-width:180px;overflow:hidden"></div></div></div>
   </div>
   <div class="hdr-right">
     <span class="sync-txt" id="syncTxt">Not synced</span>
