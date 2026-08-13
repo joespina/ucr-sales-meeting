@@ -224,7 +224,10 @@ textarea.fi { min-height: 58px; resize: vertical; }
 }
 .dp-link-costar { background: #0D1B2E; color: #fff; }
 .dp-link-moodys { background: #5B21B6; color: #fff; }
+.dp-link-mls { background: #a15c00; color: #fff; }
 .dp-link-map { background: #059669; color: #fff; }
+.addr-link { color: inherit; text-decoration: none; border-bottom: 1px dashed #9CA3AF; }
+.addr-link:hover { border-bottom-color: var(--navy, #0D1B2E); }
 .dp-edit-btn {
   width: 100%;
   padding: 10px;
@@ -1805,10 +1808,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-27",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=12451+Dedeaux+Road+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260727015824513579000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260727004844434987000000",
         notes: "MLS #4157170",
       },
       {
@@ -1825,10 +1829,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-27",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=396+Brookhaven+Street+Brookhaven+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260727180111030775000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260722121017745261000000",
         notes: "MLS #4157222",
       },
       {
@@ -1845,10 +1850,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-27",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=8840+N+Highway+51+Southaven+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260724210559921929000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260724210559108520000000",
         notes: "MLS #4157257",
       },
       {
@@ -1865,10 +1871,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-28",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1621+23rd+Avenue+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260715002235952234000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260714215516164319000000",
         notes: "MLS #4157351",
       },
       {
@@ -1885,10 +1892,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-28",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1111+Bienville+Boulevard+Ocean+Springs+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260727185947571318000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260727152437016143000000",
         notes: "MLS #4157364",
       },
       {
@@ -1905,10 +1913,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-30",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=9295+Mississippi+178+Byhalia+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260728172222828958000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260728164520669157000000",
         notes: "MLS #4157481",
       },
       {
@@ -1925,10 +1934,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-30",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=154+Providence+Road+Natchez+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730025621213260000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260730025620127486000000",
         notes: "MLS #4157511",
       },
       {
@@ -1945,10 +1955,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-30",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=407+Pinola+Drive+Magee+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731031919174423000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731024821554134000000",
         notes: "MLS #4157639",
       },
       {
@@ -1965,10 +1976,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=5700+N+Hills+Street+Meridian+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731133242721932000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731130433967101000000",
         notes: "MLS #4157658",
       },
       {
@@ -1985,10 +1997,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=207+S+Railroad+Avenue+Brookhaven+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730134557348111000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260625161519025702000000",
         notes: "MLS #4157529",
       },
       {
@@ -2005,10 +2018,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=426+W+Capitol+Street+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731172334871749000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260717150858405309000000",
         notes: "MLS #4157682",
       },
       {
@@ -2025,10 +2039,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=3016+US+80+Morton+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731162731262443000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729164257344876000000",
         notes: "MLS #4157689",
       },
       {
@@ -2045,10 +2060,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=15269+Highway+613+Lucedale+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731234635871959000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731223419142958000000",
         notes: "MLS #4157778",
       },
       {
@@ -2065,10 +2081,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1814+Martin+Luther+King+Jr+Blvd+Greenville+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801012922902459000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801004829616471000000",
         notes: "MLS #4157785",
       },
       {
@@ -2085,10 +2102,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=4435+Mangum+Drive+Flowood+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801025558800181000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731230920349495000000",
         notes: "MLS #4157795",
       },
       {
@@ -2105,10 +2123,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=100+Elizabeth+Street+Picayune+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801124822443786000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801120126020359000000",
         notes: "MLS #4157803",
       },
       {
@@ -2125,10 +2144,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=4407+US+Highway+49+Hattiesburg+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801195405287269000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801193157367027000000",
         notes: "MLS #4157849",
       },
       {
@@ -2145,10 +2165,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1569+Old+Fannin+Road+Flowood+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730000935724141000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260702110335568135000000",
         notes: "MLS #4157858",
       },
       {
@@ -2165,10 +2186,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-02",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=9271+Highway+613+Lucedale+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260802203009094051000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260802200944105198000000",
         notes: "MLS #4157886",
       },
       {
@@ -2185,10 +2207,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-02",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=0+S+West+Street+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260802224928432936000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260802211139157766000000",
         notes: "MLS #4157889; Unimproved Land",
       },
       {
@@ -2205,10 +2228,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=710+S+Main+Street+Poplarville+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803133432144774000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260802210430862798000000",
         notes: "MLS #4157902",
       },
       {
@@ -2225,10 +2249,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=55+Coles+Drive+Pontotoc+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803193134919936000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260803183317499195000000",
         notes: "MLS #4157980; Unimproved Land",
       },
       {
@@ -2245,10 +2270,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=250+Barry+Street+Lyon+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260728192216385243000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260727174127689512000000",
         notes: "MLS #4157432",
       },
       {
@@ -2265,10 +2291,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-30",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=604+White+Goose+Cove+Hernando+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260729183626701943000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260722150126564431000000",
         notes: "MLS #4157463",
       },
       {
@@ -2285,10 +2312,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=45+Springhill+Church+Road+Waynesboro+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730152835658037000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260730144258189653000000",
         notes: "MLS #4157537",
       },
       {
@@ -2305,10 +2333,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=3032+Windsor+Avenue+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260727145453002176000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260724164145710025000000",
         notes: "MLS #4157540",
       },
       {
@@ -2325,10 +2354,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=5572+Pine+Lane+Drive+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260727150628571910000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260724175111384504000000",
         notes: "MLS #4157543",
       },
       {
@@ -2345,10 +2375,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1947+Smallwood+Street+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730012829666311000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260720142341653423000000",
         notes: "MLS #4157544",
       },
       {
@@ -2365,10 +2396,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=4267+Will+O+Run+Drive+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731143805231398000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260721153334427871000000",
         notes: "MLS #4157564",
       },
       {
@@ -2385,10 +2417,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1200+Meadowbrook+Road+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730145139592826000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260728174805750180000000",
         notes: "MLS #4157669",
       },
       {
@@ -2405,10 +2438,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=5638+Dogwood+Trail+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731140213102944000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729182009517207000000",
         notes: "MLS #4157677",
       },
       {
@@ -2425,10 +2459,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=2157+Hemmingway+Drive+Nesbit+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731180205519888000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260707172825273492000000",
         notes: "MLS #4157711",
       },
       {
@@ -2445,10 +2480,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=185+Monaco+Court+Jackson+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731135059867804000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729192141636870000000",
         notes: "MLS #4157726",
       },
       {
@@ -2465,10 +2501,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=5496+Chalone+Place+Ocean+Springs+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731163307700193000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731163107575383000000",
         notes: "MLS #4157736",
       },
       {
@@ -2485,10 +2522,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=138+Destiny+Oaks+Drive+Long+Beach+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260804183442888613000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731164843901375000000",
         notes: "MLS #4157737",
       },
       {
@@ -2505,10 +2543,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-02",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=11713+Wakeland+Court+Ocean+Springs+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731202011571375000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260730183418305066000000",
         notes: "MLS #4157791",
       },
       {
@@ -2525,10 +2564,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=2154+Floyd+Drive+Biloxi+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803183643137226000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260803170052513604000000",
         notes: "MLS #4157964",
       },
       {
@@ -2545,10 +2585,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=Jordan+River+Drive+Bay+Saint+Louis+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803193335536299000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260803192136253345000000",
         notes: "MLS #4157978",
       },
       {
@@ -2565,10 +2606,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=509+Glendale+Drive+Yazoo+City+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731202102781282000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731200735169521000000",
         notes: "MLS #4157993",
       },
       {
@@ -2585,10 +2627,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=9107+Myrleville+Road+Benton+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803212847554525000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731225647494182000000",
         notes: "MLS #4158003",
       },
       {
@@ -2605,10 +2648,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-03",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=8854+Kipapa+Way+Diamondhead+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260803220212678846000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801133430964533000000",
         notes: "MLS #4158006",
       },
     ],
@@ -3427,10 +3471,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-28",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=294+Thames+Avenue+Bay+Saint+Louis+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260728143336302126000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260728143335477192000000",
         notes: "MLS #4157301",
       },
       {
@@ -3447,10 +3492,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1946+Pass+Road+Biloxi+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260729173713018483000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729171619347454000000",
         notes: "MLS #4157446",
       },
       {
@@ -3467,10 +3513,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1956+Pass+Road+Biloxi+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260729174154838022000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729174154251553000000",
         notes: "MLS #4157449",
       },
       {
@@ -3487,10 +3534,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1956+Pass+Road+Biloxi+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260729171208452282000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729165011202152000000",
         notes: "MLS #4157440",
       },
       {
@@ -3507,10 +3555,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=6012+S+Hwy+55+Byram+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260729165637691462000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729165636773469000000",
         notes: "MLS #4157438",
       },
       {
@@ -3527,10 +3576,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-29",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=211+Gay+Street+McComb+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730002153744871000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260729234035165223000000",
         notes: "MLS #4157502",
       },
       {
@@ -3547,10 +3597,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1414+25th+Avenue+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730192314835206000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260730192314337512000000",
         notes: "MLS #4157612",
       },
       {
@@ -3567,10 +3618,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1414+25th+Avenue+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260730220242404578000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260730220241533669000000",
         notes: "MLS #4157616",
       },
       {
@@ -3587,10 +3639,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1414+25th+Avenue+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731145500247047000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731145459400760000000",
         notes: "MLS #4157672",
       },
       {
@@ -3607,10 +3660,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-07-31",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=1414+25th+Avenue+Gulfport+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260731144921655574000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260731135918247371000000",
         notes: "MLS #4157673",
       },
       {
@@ -3627,10 +3681,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=5403+Castlewoods+Flowood+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801133913497634000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801133032370481000000",
         notes: "MLS #4157806",
       },
       {
@@ -3647,10 +3702,11 @@ const MEETINGS = {
         capRate: "",
         listDate: "2026-08-01",
         broker: "",
-        source: "flmls",
+        source: "mls",
         costarId: "",
         mapUrl: "https://www.google.com/maps/search/?q=506+Grants+Ferry+Road+Brandon+Mississippi",
         photoUrl: "https://cdn.resize.sparkplatform.com/mu/640x480/true/20260801175820864704000000-o.jpg",
+        mlsUrl: "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/20260801174218942837000000",
         notes: "MLS #4157831",
       },
     ],
@@ -3816,14 +3872,18 @@ var SRC_META = {
   costar: {label:"CoStar", cls:"src-cs", url:"costarUrl"},
   moodys: {label:"Moody's", cls:"src-md", url:"moodysUrl"},
   crexi:  {label:"Crexi", cls:"src-crexi", url:"crexiUrl"},
-  mls:    {label:"MLS United", cls:"src-mls", url:""}
+  mls:    {label:"MLS United", cls:"src-mls", url:"mlsUrl"}
 };
+// "flmls" is an alias some weekly pulls have used for FlexMLS/MLS United data —
+// treat it identically to "mls" so it always gets the same badge + link treatment.
+var SRC_ALIAS = { flmls: "mls" };
 function srcHtml(src, item) {
   item = item || {};
   var tokens = String(src||"").toLowerCase().split(",").map(function(s){return s.trim();}).filter(Boolean);
   var expanded = [];
   tokens.forEach(function(t){
     if (t === "both") { expanded.push("costar"); expanded.push("moodys"); }
+    else if (SRC_ALIAS[t]) expanded.push(SRC_ALIAS[t]);
     else if (SRC_META[t]) expanded.push(t);
   });
   expanded = expanded.filter(function(v,i){ return expanded.indexOf(v) === i; }); // dedupe
@@ -3835,6 +3895,24 @@ function srcHtml(src, item) {
     var tag = url ? "a" : "span";
     return "<" + tag + " class='src-badge " + meta.cls + "'" + attrs + ">" + meta.label + (url ? " ↗" : "") + "</" + tag + ">";
   }).join(" ");
+}
+// Per Micah's request (2026-08-13): every listing needs a hyperlink straight
+// to its source listing, EXCEPT CoStar (CoStar's listing pages require a login
+// UCR doesn't have a license to share, so we intentionally never link to them).
+// Preference order when a listing is merged across sources: Crexi, then
+// Moody's, then MLS. Returns "" when the only source is CoStar (or there's no
+// link at all yet), in which case the caller should leave the address plain.
+function listingUrl(item) {
+  item = item || {};
+  return item.crexiUrl || item.moodysUrl || item.mlsUrl || "";
+}
+// Wraps the address text in a link to the listing (per listingUrl()'s source
+// preference) when one is available; otherwise returns the plain escaped text.
+// stopPropagation keeps a click on the link from also opening the detail panel.
+function addrLinkHtml(item, addrText) {
+  var url = listingUrl(item);
+  if (!url) return addrText;
+  return "<a href='" + ea(url) + "' target='_blank' class='addr-link' onclick='event.stopPropagation()' title='View listing'>" + addrText + "</a>";
 }
 function formatPrice(price) {
   if (!price) return "";
@@ -3957,7 +4035,7 @@ function renderTable(tab) {
     }
 
     // Address main: show marketingName as subtitle if present
-    var addrMain = eh(item.address);
+    var addrMain = addrLinkHtml(item, eh(item.address));
     var addrExtra = item.marketingName ? "<div style='color:#888;font-size:12px;font-style:italic;margin-top:1px'>" + eh(item.marketingName) + "</div>" : "";
     var brokerCell = "<div class='broker-name'>" + eh(item.contact || "—") + "</div>" + (item.office ? "<div class='broker-office'>" + eh(item.office) + "</div>" : "");
 
@@ -4041,7 +4119,7 @@ function renderSaleComps() {
     tr.innerHTML =
       "<td class='row-num'>" + (i+1) + "</td>" +
       "<td class='photo-cell'>" + (item.photoUrl ? "<img class='photo-thumb' src='" + ea(item.photoUrl) + "' alt=''>" : "<div class='photo-ph'>&#128247;</div>") + "</td>" +
-      "<td><div class='addr-main'>" + eh(item.address) + "</div><div class='addr-sub'>" + eh(addrSub) + "</div></td>" +
+      "<td><div class='addr-main'>" + addrLinkHtml(item, eh(item.address)) + "</div><div class='addr-sub'>" + eh(addrSub) + "</div></td>" +
       "<td><span class='type-badge'>" + eh(item.type) + "</span>" + landBadge(item) + "</td>" +
       "<td style='font-size:13px;color:#555'>" + eh(item.size||"—") + "</td>" +
       "<td style='font-size:13px;color:#555'>" + eh(item.lotSize||"—") + "</td>" +
@@ -4086,7 +4164,7 @@ function renderLeaseComps() {
     tr.innerHTML =
       "<td class='row-num'>" + (i+1) + "</td>" +
       "<td class='photo-cell'>" + (item.photoUrl ? "<img class='photo-thumb' src='" + ea(item.photoUrl) + "' alt=''>" : "<div class='photo-ph'>&#128247;</div>") + "</td>" +
-      "<td><div class='addr-main'>" + eh(item.address) + "</div><div class='addr-sub'>" + eh(addrSub) + "</div></td>" +
+      "<td><div class='addr-main'>" + addrLinkHtml(item, eh(item.address)) + "</div><div class='addr-sub'>" + eh(addrSub) + "</div></td>" +
       "<td><span class='type-badge'>" + eh(item.type) + "</span>" + landBadge(item) + "</td>" +
       "<td style='font-size:13px;color:#555'>" + eh(item.size) + (item.totalSize ? "<br><span style='color:#aaa;font-size:11px'>Bldg: " + eh(item.totalSize) + "</span>" : "") + "</td>" +
       "<td class='price-cell'>" + rateDisplay + "</td>" +
@@ -4237,6 +4315,7 @@ function renderPanel(item, tab) {
   if (item.costarUrl) html += "<a href='" + ea(item.costarUrl) + "' target='_blank' class='dp-link-costar'>CoStar &#8599;</a>";
   if (item.moodysUrl) html += "<a href='" + ea(item.moodysUrl) + "' target='_blank' class='dp-link-moodys'>Moody&#39;s &#8599;</a>";
   if (item.crexiUrl) html += "<a href='" + ea(item.crexiUrl) + "' target='_blank' class='dp-link-crexi'>Crexi &#8599;</a>";
+  if (item.mlsUrl) html += "<a href='" + ea(item.mlsUrl) + "' target='_blank' class='dp-link-mls'>MLS United &#8599;</a>";
   if (item.mapUrl) html += "<a href='" + ea(item.mapUrl) + "' target='_blank' class='dp-link-map'>&#128205; Map</a>";
   html += "</div>";
 
