@@ -16,7 +16,9 @@ import json, re, sys, datetime
 SALE_IN, OUT = sys.argv[1], sys.argv[2]
 LEASE_IN = sys.argv[3] if len(sys.argv) > 3 else None
 EXPORT_DATE = datetime.date(2026, 9, 1)
-IMG = "https://crexi.com/images/format=auto,width=620,height=400,fit=cover/assets/"
+# Sale photos hang off /assets/, lease photos off /lease-assets/; the raw files carry
+# whichever prefix the card had, so only the common part is prepended here.
+IMGBASE = "https://crexi.com/images/format=auto,width=620,height=400,fit=cover/"
 
 FS_KEYS = ["id","address","city","state","zip","county","type","isLand","marketingName","price","pricePerSF",
            "pricePerUnit","capRate","size","lotSize","units","yearBuilt","zoning","tenant","contact","office",
@@ -55,6 +57,8 @@ def build(path, keys, kind, start=0):
         if not line or line.startswith('#'): continue
         p = (line.split('~') + ['']*9)[:9]
         aid, dom, price, addr, city, zp, spec, yb, photo = p
+        if kind == 'sale' and photo and not photo.startswith(('assets/', 'lease-assets/')):
+            photo = 'assets/' + photo
         i += 1
         ld = ''
         if dom.strip().isdigit():
@@ -70,15 +74,20 @@ def build(path, keys, kind, start=0):
         m = re.search(r'(\d+)\s*Units?\b', spec, re.I)
         units = m.group(1) if m else ''
         notes = [spec]
+        if not photo:
+            # Crexi serves a generic map graphic when a listing has no photo of its own;
+            # that placeholder is dropped at capture time, so a blank here is a real gap.
+            notes.append('No photo available on Crexi')
         if not ld:
             notes.append('Days on market not published for this listing')
         d = dict(address=addr, city=city, state='MS', zip=zp,
                  county=(COUNTY.get(city,'') + ' County') if COUNTY.get(city) else '',
                  type=ty, isLand=(ty == 'Land'), size=size, lotSize=lot, units=units,
                  yearBuilt=yb, listDate=ld, domLabel=('' if ld else 'N/A'), source='crexi',
-                 crexiUrl='https://www.crexi.com/properties/' + aid,
+                 crexiUrl=('https://www.crexi.com/lease/properties/' + aid) if kind == 'lease'
+                          else ('https://www.crexi.com/properties/' + aid),
                  mapUrl=mapurl(addr, city),
-                 photoUrl=(IMG + photo) if photo else '',
+                 photoUrl=(IMGBASE + photo) if photo else '',
                  notes=' · '.join(notes))
         if kind == 'sale':
             unpriced = price.lower().startswith('unpriced') or 'bid' in price.lower()
@@ -88,8 +97,16 @@ def build(path, keys, kind, start=0):
                 d['notes'] = ' · '.join(notes)
             out.append(rec(keys, dict(d, id=f"cx{i}", price=('' if unpriced else price), capRate=cap)))
         else:
-            out.append(rec(keys, dict(d, id=f"cxl{i}", askingRate=price.lstrip('$'),
-                                      leaseType='Negotiable' if not price.strip('$') else '')))
+            # Crexi prints the rate with its own unit: "$9.50/SF/YR", "$1.33/SF/MO",
+            # "$6-$12/SF/YR". Split the number from the unit so the renderer does not
+            # relabel a monthly rate as annual.
+            m = re.match(r'\$?([\d.,]+(?:\s*-\s*\$?[\d.,]+)?)\s*/?\s*SF\s*/\s*(YR|MO)', price, re.I)
+            if m:
+                rate = m.group(1).replace('$', '')
+                unit = '$/SF/Year' if m.group(2).upper() == 'YR' else '$/SF/Month'
+            else:
+                rate, unit = price.lstrip('$'), ('Negotiable' if not price.strip('$ ') else '')
+            out.append(rec(keys, dict(d, id=f"cxl{i}", askingRate=rate, leaseType=unit)))
     return out
 
 forSale = build(SALE_IN, FS_KEYS, 'sale')
