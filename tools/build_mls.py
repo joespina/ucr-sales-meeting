@@ -130,10 +130,21 @@ for section, p in parse_pipe(RAW):
 
     if 'CLOSED' in section.upper():
         ci += 1
+        # MLS United's IDX feed does NOT publish a sold price. `clusters` has no
+        # ClosePrice field at all, and CurrentPrice == ListPrice on closed records
+        # (verified 2026-09-01 on 4141839: both 1,275,000, and the detail page shows
+        # the same single figure). Putting that number in the Sale Price column would
+        # assert a sold price we do not have, which is worse for a comp than a blank.
+        # Leave salePrice empty and state the last list price in the notes.
+        lp = f"${int(float(price)):,}" if price else ''
         saleComps.append(rec(SC_KEYS, dict(common, id=f"mc{ci}",
             saleDate=dates.get('C' + lid, '') or dates.get(lid, ''),
-            salePrice=(f"${int(float(price)):,}" if price else ''),
-            notes=' · '.join(notes + ['Closed sale reported by MLS United']))))
+            salePrice='',
+            notes=' · '.join(notes + [
+                (f'Last list price {lp} - MLS United does not publish sold prices in its IDX feed, '
+                 'so this is NOT the sale price' if lp else
+                 'MLS United does not publish sold prices in its IDX feed'),
+                'Closed sale reported by MLS United']))))
         continue
 
     pending = 'PENDING' in section.upper()
