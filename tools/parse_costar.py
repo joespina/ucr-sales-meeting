@@ -15,11 +15,16 @@ One entry spans several PDF pages, so blocks are grouped by entry number.
 """
 import re, json, sys
 
+# A page break puts a form feed in front of the entry number, and \s eats it: with
+# "\f" plus four spaces the old ^\s{1,4} no longer matched and the entry silently
+# merged into the previous one, so its fields were attributed to the wrong property
+# (found 2026-09-01: 106 Riverview Dr rendered 120 Saint Charles Ave's size).
+# Form feeds are stripped from every line before matching.
 HDR = re.compile(r'^\s{1,4}(\d+)\s{2,}(\S.*?)\s*$')
 LOC = re.compile(r'^\s*(.+?),\s*(Mississippi|MS)\s+(\d{5})\s*(?:\(([^)]*)\))?\s*(?:-\s*(.*?)\s*Submar\S*)?\s{2,}(\S.*?)\s*$')
 
 def blocks(path):
-    lines = open(path).read().split('\n')
+    lines = [l.lstrip('\f') for l in open(path).read().split('\n')]
     hits = []
     for i, l in enumerate(lines):
         m = HDR.match(l)
@@ -41,22 +46,53 @@ def blocks(path):
             out[num]['body'] += '\n' + body
     return [out[k] for k in sorted(out, key=lambda x: int(x))]
 
+HEADINGS = ("Property Summary", "For Sale Summary", "For Lease Summary", "Property Details",
+            "Amenities", "Available Spaces", "Market Conditions", "Contacts", "Unit Mix",
+            "Transportation", "Sale History", "Tenants", "Land Details")
+# Sections whose key/value pairs we want. "For Sale Summary" and "For Lease Summary" only
+# exist in CoStar's *listing* export; the thinner property export has neither, which is
+# exactly how you tell the two templates apart (see feedback-costar-missing-reports).
+WANTED = ("Property Summary", "For Sale Summary", "For Lease Summary", "Property Details",
+          "Land Details")
+SECT = re.compile(r'^[ \t]*(' + '|'.join(HEADINGS) + r')[ \t]*$', re.M)
+
+def sections(body):
+    """Split a block into {heading: text} using the known section headings."""
+    out, hits = {}, list(SECT.finditer(body))
+    for i, m in enumerate(hits):
+        end = hits[i+1].start() if i+1 < len(hits) else len(body)
+        out.setdefault(m.group(1), '')
+        out[m.group(1)] += body[m.end():end]
+    return out
+
 def kvpairs(body):
-    """Property Summary style two-column key/value lines."""
+    """Two-column 'Label   Value' pairs from every wanted section."""
     kv = {}
-    for seg in re.findall(r'Property Summary\n(.*?)(?=\n\s*(?:Amenities|Available Spaces|Market Conditions|Contacts)\b|\Z)', body, re.S):
-        for line in seg.split('\n'):
-            if not line.strip(): continue
-            # two columns separated by 3+ spaces; each column "Label   Value"
+    secs = sections(body)
+    for name in WANTED:
+        for line in secs.get(name, '').split('\n'):
+            if not line.strip() or line.strip().startswith('2026 CoStar'):
+                continue
             parts = re.split(r'\s{3,}', line.strip())
             i = 0
             while i + 1 < len(parts):
                 k, v = parts[i].strip(), parts[i+1].strip()
-                if k and v and not k[0].isdigit(): kv.setdefault(k, v)
+                if k and v and not k[0].isdigit():
+                    kv.setdefault(k, v)
                 i += 2
-            if len(parts) == 1:
-                pass
     return kv
+
+def owner(body):
+    """Recorded/True Owner from the Contacts table, best available."""
+    sec = sections(body).get('Contacts', '')
+    best = ''
+    for line in sec.split('\n'):
+        m = re.match(r'\s*(Recorded Owner|True Owner)\s{2,}(\S.*?)(?:\s{2,}|$)', line)
+        if m:
+            if m.group(1) == 'True Owner':
+                return m.group(2).strip()
+            best = best or m.group(2).strip()
+    return best
 
 def spaces(body):
     rows = []
@@ -79,7 +115,7 @@ if __name__ == '__main__':
     bs = blocks(path)
     print('entries:', len(bs), '->', [b['num'] for b in bs])
     for b in bs:
-        b['kv'] = kvpairs(b['body']); b['spaces'] = spaces(b['body']); b['amen'] = amenities(b['body'])
+        b['kv'] = kvpairs(b['body']); b['spaces'] = spaces(b['body']); b['amen'] = amenities(b['body']); b['owner'] = owner(b['body'])
         b.pop('body')
     json.dump(bs, open(sys.argv[2],'w'), indent=1)
     ks = {}

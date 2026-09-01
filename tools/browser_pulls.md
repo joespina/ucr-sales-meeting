@@ -203,7 +203,34 @@ If results show skeleton loaders forever, **ask Jo to open the tab herself** —
 on 2026-08-25 after many Claude-initiated attempts failed. The page is server-rendered, so patching
 `fetch` captures only analytics; there is no listings API to replay. Read the DOM.
 
-### The 7-day filter does not mean "newly listed"
+### Use "Listing timeline → Custom", not the 7-day Time Period (2026-09-01)
+
+The filter panel (sliders icon) → **Listing Information → Listing timeline** has a **Custom**
+tab that takes an explicit date range, and it is a real listing-date filter. For Aug 24–31 it
+returned 49 Mississippi for-sale properties, and every one of the 48 that published a
+days-on-market came back between **2 and 8 days** — exactly the window. That is the filter to
+use. Set the two dates by **clicking the calendar**: typing into the second box overwrites the
+first, and typing into the first alone leaves the range open-ended ("after 2026-08-24").
+
+The location filter also survives only if it is set through the UI autocomplete — a hand-built
+`address_value=` is dropped, and so is the Custom range on a page reload.
+
+Reading the results: switch to the **list-only layout** (rightmost icon, top right). The
+split/map layout virtualises to ~5 cards and the scroll container is hard to find; the list
+layout puts all of them in the DOM at once. To get real days-on-market per property, load each
+property page in a **hidden same-origin iframe** and poll its text — ~4 in parallel, about 3s
+each. A plain `fetch()` of the property URL returns a shell with no days-on-market in it.
+
+**Crexi carries residential listings.** The Aug 24–31 for-sale set included a Section 8
+single-family portfolio, three houses, a "home estate" and two residential building-lot tracts —
+7 of 49. Read every title before ingesting and exclude them, the same as MLS PropertyType `B`.
+
+**For Lease is flakier than For Sale.** On 2026-09-01 the lease search reported 12 matching
+Mississippi listings but never rendered them, through a reload, a layout switch and a fresh
+navigation. For Sale worked in the same session. If lease will not load, say so in the coverage
+banner rather than leaving the gap silent.
+
+### The old 7-day filter does not mean "newly listed"
 
 Set via the sliders icon → **Listing Information** → **Listing timeline** → Time Period → 7 days,
 which stamps `&ListingTimeline_dimension=7%20days&ListingTimeline_block=Time%20Period` and gave 161

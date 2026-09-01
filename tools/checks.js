@@ -42,7 +42,7 @@ for (const a of A) for (const r of m[a] || []) {
   if (RESI.test(r.notes || '')) bad.push([...where, 'notes read residential -- ' + (r.notes || '').slice(0, 60)]);
 
   // Soft signals worth a human glance.
-  if (a === 'forSale'  && !r.price && !/not published|call for pricing/i.test(r.notes || ''))
+  if (a === 'forSale'  && !r.price && !/not published|not disclosed|withheld|call for pricing|negotiable|auction/i.test(r.notes || ''))
     warn.push([...where, 'no price and no explanation']);
   // An empty askingRate is fine -- the renderer shows "Rate Withheld".
   // What matters is a rate whose magnitude contradicts its unit, which is

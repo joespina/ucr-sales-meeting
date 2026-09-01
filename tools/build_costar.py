@@ -6,12 +6,25 @@
 Comps come from the two small CoStar comps PDFs and are short enough to hand-enter
 straight into the records file -- see WEEKLY.md.
 
-CHECK THE EXPORT TEMPLATE FIRST. If "Asking Price" never appears in the For Sale
-text, Jo exported the property-attribute report rather than the listing report and
-the cards will have no price, cap rate, broker or list date. Ingest it anyway (the
-properties are real) but every record gets domLabel "N/A" and a note saying the
-price was not published, so a blank never reads as free. Ask her to re-export.
+BOTH CoStar templates are handled, per record, automatically:
+  * the LISTING report has a "For Sale Summary" / "For Lease Summary" section with
+    Asking Price, Status, Sale Type, On Market and Last Update -- those are used, and
+    "On Market" is turned into a real listDate relative to EXPORT_DATE below.
+  * the PROPERTY report has neither. Those records keep the old behaviour: no price,
+    domLabel "N/A", and a note saying the price was not published, so a blank never
+    reads as free.
+A single export can mix the two, so the choice is made per record, not per file.
+
+NOTE Neither template has carried broker contacts since 2026-08-19 -- only Recorded/
+True Owner, which is surfaced in notes. If contacts matter, Jo must re-export from
+the listing view.
+
+EXPORT_DATE must match the date on the PDF footer; "On Market: 5 Days" is meaningless
+without it.
 """
+import datetime
+
+EXPORT_DATE = datetime.date(2026, 9, 1)
 import json, re, sys
 
 if len(sys.argv) < 4:
@@ -65,8 +78,14 @@ def leased_of(kv):
             m=re.search(r'\(([\d.]+)%\)', kv[k]);  return m.group(1)+'% leased' if m else ''
     return ''
 def land_of(kv):
-    v=kv.get('Land Area - Gross') or ''
-    m=re.match(r'([\d.,]+\s*AC)', v);  return m.group(1) if m else ''
+    # "Land Area - Gross" is the property-report name; the listing report calls it
+    # "Land" (and sometimes "Land Area"). Checking only the first left every CoStar
+    # card with an empty Lot/Acreage column.
+    for k in ('Land Area - Gross', 'Land', 'Land Area'):
+        v = kv.get(k) or ''
+        m = re.match(r'([\d.,]+\s*AC)', v)
+        if m: return m.group(1)
+    return ''
 
 def rent_parts(v):
     """'$16.50 SF/Year/NNN' -> ('16.50','NNN'); '$8.00 - 12.00 SF/Year' -> ('8.00 - 12.00','')"""
@@ -76,6 +95,43 @@ def rent_parts(v):
     lt=(m.group(2) or '').strip()
     if lt.upper()=='TBD': lt=''
     return m.group(1).replace(' ',' '), lt
+
+PRICE_RE = re.compile(r'^\$([\d,]+)(?:\s*\(([^)]*)\))?')
+
+def price_parts(v):
+    """'$729,500 ($20,264/Unit)' -> ('$729,500', '', '20,264')
+       '$2,900,000 ($151.82/SF)' -> ('$2,900,000', '151.82', '')"""
+    if not v: return '', '', ''
+    m = PRICE_RE.match(v.strip())
+    if not m: return '', '', ''
+    per = (m.group(2) or '')
+    psf = pu = ''
+    mm = re.match(r'\$?([\d.,]+)/SF', per)
+    if mm: psf = mm.group(1)
+    mm = re.match(r'\$?([\d.,]+)/Unit', per)
+    if mm: pu = mm.group(1)
+    return '$' + m.group(1), psf, pu
+
+def list_date(on_market):
+    """CoStar gives elapsed time, not a date: '5 Days', '1 Day', '3 Months',
+    '1 Year 2 Months'. Convert to an ISO date relative to the export date."""
+    if not on_market: return ''
+    days = 0
+    for n, unit in re.findall(r'(\d+)\s*(Day|Week|Month|Year)s?', on_market, re.I):
+        n = int(n)
+        days += n * {'day': 1, 'week': 7, 'month': 30, 'year': 365}[unit.lower()]
+    if not days and not re.search(r'\d', on_market): return ''
+    return (EXPORT_DATE - datetime.timedelta(days=days)).isoformat()
+
+def cap_of(kv):
+    # Store the number only -- the dashboard appends the % sign, so "8.8%" here
+    # renders as "8.8%%".
+    for k in ('Cap Rate', 'Actual Cap Rate'):
+        v = (kv.get(k) or '').strip()
+        if v and v != '-':
+            m = re.match(r'([\d.]+)\s*%?', v)
+            if m: return m.group(1)
+    return ''
 
 def notes_for(b, kv, extra=None):
     n=[]
@@ -94,7 +150,11 @@ def notes_for(b, kv, extra=None):
     if kv.get('Docks'): n.append(kv['Docks']+' docks')
     if kv.get('Drive Ins'): n.append(kv['Drive Ins']+' drive-ins')
     if kv.get('Parking Spaces'): n.append('Parking: '+kv['Parking Spaces'])
-    if kv.get('True Owner'): n.append('Owner: '+kv['True Owner'])
+    own = b.get('owner') or kv.get('True Owner') or kv.get('Recorded Owner')
+    if own: n.append('Owner: '+own)
+    if kv.get('Sale Type'): n.append('Sale type: '+kv['Sale Type'])
+    if kv.get('Sale Conditions'): n.append('Sale conditions: '+kv['Sale Conditions'])
+    if kv.get('Last Update'): n.append('CoStar last updated '+kv['Last Update'])
     if b.get('amen'): n.append('Amenities: '+b['amen'])
     if b['submarket']: n.append(b['submarket']+' submarket')
     if extra: n.extend(extra)
@@ -124,13 +184,26 @@ for key,g in groups.items():
         alsoLease = '%s available at %s' % (av, ar)
     elif av:
         alsoLease = '%s available, rent withheld' % av
-    extra.append('Asking price not published in this CoStar export')
+    price, psf, pu = price_parts(kv.get('Asking Price',''))
+    ld = list_date(kv.get('On Market',''))
+    status = kv.get('Status','')
+    if not price:
+        # "Withheld" is the broker's choice and is worth saying plainly; a missing
+        # For Sale Summary is a thin-template export and is a different problem.
+        extra.append('Asking price withheld by the listing broker'
+                     if kv.get('Asking Price','').strip().lower() == 'withheld'
+                     else 'Asking price not published in this CoStar export')
+    if status and status.lower() != 'active':
+        extra.append('CoStar status: '+status)
     i+=1
     forSale.append(rec(FS_KEYS, dict(
         id=f"cs{i}", address=addr, city=b['city'], state="MS", zip=b['zip'], county=b['county'],
         type=typ, isLand=isLand, marketingName=mk, size=size_of(kv), lotSize=land_of(kv),
+        price=price, pricePerSF=psf, pricePerUnit=pu, capRate=cap_of(kv),
         units=kv.get('Units',''), yearBuilt=(kv.get('Built') or '').split('/')[0],
-        zoning=kv.get('Zoning',''), alsoForLease=alsoLease, domLabel="N/A", source="costar",
+        zoning=kv.get('Zoning',''), alsoForLease=alsoLease,
+        flags=('Under Contract' if 'contract' in status.lower() else ''),
+        listDate=ld, domLabel=('' if ld else 'N/A'), source="costar",
         costarUrl=costarurl(addr,b['city']), mapUrl=mapurl(addr,b['city']),
         notes=notes_for(b,kv,extra))))
 
@@ -155,14 +228,24 @@ for key,g in groups.items():
     rows=[r for x in g for r in x[0]['spaces']]
     if rows:
         extra.append('%d space%s listed' % (len(rows), '' if len(rows)==1 else 's'))
+    svc = kv.get('Service Type','')
+    SVC = {'Triple Net':'NNN','Full Service':'Full Service','Modified Gross':'MG',
+           'Industrial Gross':'Industrial Gross','Plus All Utilities':'Plus Utilities'}
+    if not rate and kv.get('Asking Rent','').strip().lower()=='withheld':
+        extra.append('Asking rent withheld in this CoStar export')
+    ap, _, _ = price_parts(kv.get('Asking Price',''))
+    if ap: extra.append('Also offered for sale at '+ap)
+    ld = list_date(kv.get('On Market',''))
     i+=1
     forLease.append(rec(FL_KEYS, dict(
         id=f"cl{i}", address=addr, city=b['city'], state="MS", zip=b['zip'], county=b['county'],
         type=typ, isLand=False, marketingName=mk, askingRate=rate,
-        leaseType=(lt if lt else ("$/SF/Year" if rate else "")),
+        leaseType=(lt or SVC.get(svc, svc) or ("$/SF/Year" if rate else "")),
         size=size_of(kv), avail=' / '.join(a for a in avs if a),
         yearBuilt=(kv.get('Built') or '').split('/')[0], units=kv.get('Units',''),
-        domLabel="N/A", source="costar", costarUrl=costarurl(addr,b['city']),
+        zoning=kv.get('Zoning',''), alsoForSale=ap,
+        listDate=ld, domLabel=('' if ld else 'N/A'), source="costar",
+        costarUrl=costarurl(addr,b['city']),
         mapUrl=mapurl(addr,b['city']), notes=notes_for(b,kv,extra))))
 
 # ---------- COMPS ----------

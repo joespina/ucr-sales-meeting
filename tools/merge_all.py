@@ -26,6 +26,18 @@ def norm(x):
 ALIASES = {
     ("100 104 business park dr", "ridgeland"): ("100 business park dr", "ridgeland"),
     ("100 106 business park dr", "ridgeland"): ("100 business park dr", "ridgeland"),
+    # 2026-09-02: same property, different spelling across sources
+    ("531 central avenue", "laurel"): ("531 central ave", "laurel"),
+    ("347 devereux drive", "natchez"): ("347 devereaux dr", "natchez"),
+    ("4432 north gloster street", "tupelo"): ("4432 n gloster st", "tupelo"),
+    ("112 riley drive", "jackson"): ("112 riley dr", "jackson"),
+    ("11376 three rivers road", "gulfport"): ("11376 three rivers rd", "gulfport"),
+    ("15075 us 49", "gulfport"): ("15075 highway 49", "gulfport"),
+    ("903 s locust street", "mccomb"): ("903 s locust st", "mccomb"),
+    ("2438 highway 98 east", "columbia"): ("2438 highway 98 e", "columbia"),
+    ("1329 ms13", "columbia"): ("1329 hwy 13 n", "columbia"),
+    ("5000 hwy 80 e", "pearl"): ("5000 highway 80 e", "pearl"),
+    ("braswell rd", "hattiesburg"): ("103 braswell rd", "hattiesburg"),
 }
 
 def akey(addr, city):
@@ -60,6 +72,14 @@ def merge(out_path, sources):
                     rec = dict(r)
                     out[a].append(rec)
                     index[a][key] = rec
+
+    # A record can arrive from a source with no list date (domLabel "N/A") and then
+    # be filled in by a later source that has one. Leaving the label behind renders a
+    # real list date as "N/A" -- 661 Sunnybrook Rd did exactly that on 2026-09-02.
+    for a in ("forSale", "forLease"):
+        for r in out[a]:
+            if r.get("listDate") and r.get("domLabel") == "N/A":
+                r["domLabel"] = ""
 
     # newest first, so the top of each tab is this week's freshest activity
     out["forSale"].sort(key=lambda r: r.get("listDate", ""), reverse=True)
