@@ -225,10 +225,20 @@ each. A plain `fetch()` of the property URL returns a shell with no days-on-mark
 single-family portfolio, three houses, a "home estate" and two residential building-lot tracts —
 7 of 49. Read every title before ingesting and exclude them, the same as MLS PropertyType `B`.
 
-**For Lease is flakier than For Sale.** On 2026-09-01 the lease search reported 12 matching
-Mississippi listings but never rendered them, through a reload, a layout switch and a fresh
-navigation. For Sale worked in the same session. If lease will not load, say so in the coverage
-banner rather than leaving the gap silent.
+**Expect 80–90% of cards, not 100%.** On 2026-09-01 the lease search was completely dead in one
+session and worked fine an hour later. Even when it works, some cards never resolve past
+`crx-card-skeleton`: 10 of 12 rendered, and no amount of scrolling the pane, scrolling each
+skeleton into view, or waiting fixed the last two. **Cycling the sort order is worth one pass** —
+it surfaced one extra (9 → 10) — but stop there and put the shortfall in the coverage banner.
+
+`Export Results` would give the full set as a CSV but it is a download: it needs the user's
+explicit go-ahead, it lands in ~/Downloads which is not a connected folder, and clicking it gave
+no visible feedback. Map pins are clusters, not listings, and collapse when clicked.
+
+**Lease specifics:** URLs are `/lease/properties/{id}/…`, photos hang off `lease-assets/` rather
+than `assets/`, and the rate carries its own unit (`$9.50/SF/YR`, `$1.33/SF/MO`, `$6-$12/SF/YR`)
+— split number from unit or a monthly rate renders as annual. A card showing
+`/content/img/default-card-map-image.png` has no photo; drop that placeholder.
 
 ### The old 7-day filter does not mean "newly listed"
 
