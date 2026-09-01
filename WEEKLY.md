@@ -100,6 +100,16 @@ Moody's **rent comps** (`propertySearchMode:true, rentCompProperty:true`) do run
 carry no lease transactions — it returns properties that merely have rent data, mostly the same
 actives. Treat Moody's lease comps as unavailable rather than re-deriving this each week.
 
+### Crexi
+
+`tools/build_crexi.py` takes the for-sale pull and, as an optional third argument, the for-lease
+pull. Filter with **Listing timeline → Custom** and an explicit date range — the 7-day Time
+Period option is not a listing-date filter. Expect a couple of cards never to render; cycle the
+sort order once to shake out extras, then state the shortfall in the coverage banner rather than
+grinding. Full detail in `tools/browser_pulls.md`.
+
+    python3 tools/build_crexi.py build/crexi_sale_raw.txt build/crexi.json build/crexi_lease_raw.txt
+
 ## 5. Merge, check, apply
 
 ```bash
