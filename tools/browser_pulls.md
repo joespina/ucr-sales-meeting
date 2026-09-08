@@ -185,6 +185,36 @@ const i=t.indexOf('Overview\nDescription');
 Anchor on `'Overview\nDescription'`, not the first `'Description'` — that matches the nav tab and
 returns photo filenames. Batch 4–5 listings per `browser_batch` as navigate+extract pairs.
 
+### `CurrentPrice` IS the sold price on a closed record (corrected 2026-09-08)
+
+This **reverses** the earlier note that the IDX feed publishes no sold price. There is no
+`ClosePrice` field, but `CurrentPrice` carries the closing figure once a listing closes.
+Established by elimination, not by a single example:
+
+| set | n | `CurrentPrice != ListPrice` |
+|---|---|---|
+| Active, listed over three months | 75 | **0** |
+| Pending in the window | 5 | **0** |
+| Closed in the window | 13 | **9** |
+
+The field diverges only after close, and MLS United's own IDX detail page renders it as the
+headline price on a Closed listing (4152925: list 299,900, CurrentPrice 263,000, page shows
+$263,000). The 2026-09-01 conclusion came from one record where the two happened to be equal —
+which is exactly what a sale at asking price looks like. **Blocks 20260701 through 20260902 still
+show "Not Disclosed" and are not being backfilled.**
+
+Closed `F` records are **lease** comps, not sale comps — route them by PropertyType.
+
+**Lease rates carry no unit.** Usually the monthly total, but agents also enter annual $/SF in
+the same field (4161218: `25` on a 4,300 SF medical suite). `build_mls.py` treats anything under
+$100 as unit-ambiguous and puts a self-describing string in `askingRate`, which `rateText()`
+passes through verbatim. Say the unit is unknown rather than assert one.
+
+**Pace the detail-page loads.** ~50 rapid navigations produced a "Client Challenge" block page on
+2026-09-08, then a CAPTCHA. Never solve the CAPTCHA. Batches of ~6 with a 4-second wait worked,
+and the block cleared after a few minutes. Anchor the description on the **last** occurrence of
+`'Remarks and Showing Info'` — the first is the nav tab and returns nav text.
+
 Photos: `StandardFields.Photos[0].Uri640`. `mlsUrl` = `…/listing_detail/{ListingKey}` (the long
 numeric key, **not** the human MLS#). Build it at pull time — it went unpopulated for weeks.
 

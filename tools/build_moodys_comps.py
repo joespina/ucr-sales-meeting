@@ -30,12 +30,17 @@ TYPE = {'LAND':'Land','RETAIL':'Retail','OFFICE':'Office','INDUSTRIAL':'Industri
         'MULTIFAMILY':'Multifamily','FARM_RANCH':'Farm/Ranch','HOSPITALITY':'Hospitality',
         'SPECIAL_PURPOSE':'Special Purpose','MIXED_USE':'Mixed Use','FLEX':'Flex'}
 
-out, i = [], 0
+out, i, dropped = [], 0, []
 for line in open(IN):
     line = line.rstrip('\n')
     if not line or line.startswith('#'): continue
+    if line.startswith('!'): continue   # '!' = excluded by hand, reason in the comment
     p = (line.split('|') + ['']*15)[:15]
     pid, addr, city, zp, cty, cat, ac, yb, bsf, price, dt, psf, src, buyer, photo = p
+    if not price and not dt:
+        # no consideration and no closing date -- Moody's has the property but no
+        # transaction on it; a card like that reads as a comp with nothing in it
+        dropped.append((addr, city, 'no price and no closing date')); continue
     i += 1
     catmain, _, sub = cat.partition('/')
     ty = TYPE.get(catmain, catmain.title())
@@ -55,7 +60,7 @@ for line in open(IN):
         id=f"mdc{i}", address=addr, city=city, state='MS', zip=zp,
         county=(cty + ' County') if cty else '', type=ty, isLand=(ty == 'Land'),
         size=(f"{int(gross):,} SF" if gross else ''),
-        lotSize=(f"{acres:g} AC" if acres else ''),
+        lotSize=(f"{acres:,.2f} AC" if acres else ''),
         saleDate=dt, salePrice=(f"${int(price):,}" if price else ''),
         pricePerSF=(f"{float(psf):.2f}" if psf and float(psf) else ''),
         yearBuilt=yb, source='moodys',
@@ -67,3 +72,5 @@ json.dump(dict(forSale=[], forLease=[], saleComps=out, leaseComps=[]),
           open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('saleComps', len(out), '| with photo', sum(1 for r in out if r['photoUrl']),
       '| with price', sum(1 for r in out if r['salePrice']))
+if dropped:
+    print('dropped:', dropped)

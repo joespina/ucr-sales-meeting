@@ -205,5 +205,11 @@ diff <(shasum -a 256 /tmp/live.html | cut -d' ' -f1) <(shasum -a 256 index.html 
   and 404'd; the photo check caught it, but the rule is to re-emit the value in a smaller batch,
   never to reconstruct it. This is the same rule as "never invent a figure", applied to tool
   output rather than to source data.
+- **A single confirming example is not a rule.** Before writing a number into the report — a
+  sale price above all — find the observation that would *disprove* the reading, not another
+  that fits it. MLS's `CurrentPrice` was called "not a sold price" on the strength of one
+  closed record where it equalled the list price; checking whether actives and pendings ever
+  diverge (they never do) settled it the other way. If the disproving check is unreachable,
+  say the value is uncertain on the card rather than picking the likely reading.
 - **Store cap rates as a bare number.** The renderer appends the `%`, so `"8.8%"` shows as
   `8.8%%`.

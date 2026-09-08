@@ -24,7 +24,7 @@ without it.
 """
 import datetime
 
-EXPORT_DATE = datetime.date(2026, 9, 1)
+EXPORT_DATE = datetime.date(2026, 9, 8)
 import json, re, sys
 
 if len(sys.argv) < 4:
@@ -56,13 +56,22 @@ LC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketi
 
 def rec(keys,d): return {k: d.get(k, False if k=="isLand" else "") for k in keys}
 
+CITY_ST = re.compile(r'^[A-Z][A-Za-z .\'-]+,\s*[A-Z]{2}$')
+
 def split_title(t):
     # Split at the LAST ' - ': the address itself can contain one
     # (e.g. "100 - 104 Business Park Dr - 100-104 Business Park").
-    i = t.rfind(' - ')
-    if i == -1:
+    # BUT a marketing name can itself end in ", City, ST"
+    # ("1313 Carterville Rd - Dollar General - Petal, MS", found 2026-09-08),
+    # and splitting at the last ' - ' then puts "Dollar General" INSIDE the
+    # address, which breaks cross-source dedup -- the exact failure the
+    # last-' - ' rule exists to prevent. Step back over a trailing "City, ST".
+    parts = t.split(' - ')
+    if len(parts) == 1:
         return t.strip(), ''
-    return t[:i].strip(), t[i+3:].strip()
+    if len(parts) > 2 and CITY_ST.match(parts[-1].strip()):
+        return ' - '.join(parts[:-2]).strip(), ' - '.join(parts[-2:]).strip()
+    return ' - '.join(parts[:-1]).strip(), parts[-1].strip()
 
 def clean(kv):
     return {k:v for k,v in kv.items() if 'Mississippi' not in k}
@@ -167,16 +176,44 @@ for b in sale:
     addr,mk = split_title(b['title'])
     groups.setdefault((norm(addr),norm(b['city'])),[]).append((b,addr,mk))
 
+def merge_kv(g):
+    """Several CoStar entries can share one address (a multi-building park or a
+    portfolio listing). Only ONE of them normally carries the For Sale Summary --
+    at 1735 N Washington St on 2026-09-08 it was the third of three -- so taking
+    g[0]'s kv alone silently dropped the asking price, status, sale type and
+    On Market, and the card then claimed "Asking price not published" with a
+    domLabel of N/A. Merge the group: first non-empty value for each key wins."""
+    out = {}
+    for x in g:
+        for k, v in clean(x[0]['kv']).items():
+            if str(v).strip() and str(v).strip() != '-' and not str(out.get(k, '')).strip():
+                out[k] = v
+    return out
+
+def size_range(g):
+    """A grouped listing spans several buildings -- show the span, not building 1."""
+    sizes = []
+    for x in g:
+        v = size_of(clean(x[0]['kv']))
+        m = re.match(r'([\d,]+)\s*SF', v or '')
+        if m: sizes.append(int(m.group(1).replace(',', '')))
+    if not sizes: return ''
+    lo, hi = min(sizes), max(sizes)
+    return '{:,} SF'.format(lo) if lo == hi else '{:,} - {:,} SF'.format(lo, hi)
+
 forSale=[]; i=0
 for key,g in groups.items():
     b,addr,mk = g[0]
-    kv=clean(b['kv'])
+    kv=merge_kv(g)
     typ=TYPEFIX.get(b['ptype'], b['ptype'])
     isLand = 'land' in typ.lower()
     extra=[]
     if len(g)>1:
-        parcels=[clean(x[0]['kv']).get('Parcel','') for x in g]
-        extra.append('%d adjacent parcels in this listing (%s)' % (len(g), ', '.join(p for p in parcels if p)))
+        bsizes=[size_of(clean(x[0]['kv'])) for x in g]
+        extra.append('%d buildings in this listing (%s)' % (len(g), ', '.join(s for s in bsizes if s)))
+        parcels=sorted({clean(x[0]['kv']).get('Parcel','') for x in g} - {''})
+        if parcels: extra.append('Parcel%s %s' % ('' if len(parcels)==1 else 's', ', '.join(parcels)))
+    if kv.get('Portfolio'): extra.append('CoStar: '+kv['Portfolio'])
     av = kv.get('Available') or kv.get('Commercial Available')
     ar = kv.get('Asking Rent') or kv.get('Commercial Asking Rent')
     alsoLease=''
@@ -198,7 +235,8 @@ for key,g in groups.items():
     i+=1
     forSale.append(rec(FS_KEYS, dict(
         id=f"cs{i}", address=addr, city=b['city'], state="MS", zip=b['zip'], county=b['county'],
-        type=typ, isLand=isLand, marketingName=mk, size=size_of(kv), lotSize=land_of(kv),
+        type=typ, isLand=isLand, marketingName=mk,
+        size=(size_range(g) if len(g)>1 else size_of(kv)), lotSize=land_of(kv),
         price=price, pricePerSF=psf, pricePerUnit=pu, capRate=cap_of(kv),
         units=kv.get('Units',''), yearBuilt=(kv.get('Built') or '').split('/')[0],
         zoning=kv.get('Zoning',''), alsoForLease=alsoLease,
@@ -217,7 +255,7 @@ for b in lease:
 forLease=[]; i=0
 for key,g in groups.items():
     b,addr,mk = g[0]
-    kv=clean(b['kv'])
+    kv=merge_kv(g)
     typ=TYPEFIX.get(b['ptype'], b['ptype'])
     rate,lt = rent_parts(kv.get('Asking Rent') or kv.get('Commercial Asking Rent') or '')
     avs=[clean(x[0]['kv']).get('Available') or clean(x[0]['kv']).get('Commercial Available') or '' for x in g]

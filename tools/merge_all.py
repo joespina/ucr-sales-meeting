@@ -38,6 +38,36 @@ ALIASES = {
     ("1329 ms13", "columbia"): ("1329 hwy 13 n", "columbia"),
     ("5000 hwy 80 e", "pearl"): ("5000 highway 80 e", "pearl"),
     ("braswell rd", "hattiesburg"): ("103 braswell rd", "hattiesburg"),
+    # 2026-09-08: CoStar abbreviates, Moody's spells it out
+    ("3405 pemberton square", "vicksburg"): ("3405 pemberton sq", "vicksburg"),
+    ("409 virlilia rd", "canton"): ("409 virilia rd", "canton"),
+    # 2026-09-08: Crexi vs MLS/CoStar spellings
+    ("650 north oak avenue", "ruleville"): ("650 n oak avenue", "ruleville"),
+    ("650 north oak avenue units", "ruleville"): ("650 n oak unit a avenue", "ruleville"),
+    # norm() strips the hyphen without inserting a space, so key on the joined form
+    ("34033405 pemberton square boulevard", "vicksburg"): ("3405 pemberton sq", "vicksburg"),
+    # Crexi lists the 44.5-acre Starkville tract on Bardwell Road; CoStar calls it
+    # Blackjack Rd. Same listing - "44.5 Acres At the Gates of Mississippi State".
+    ("bardwell road", "starkville"): ("blackjack rd", "starkville"),
+    ("1313 carterville road", "petal"): ("1313 carterville rd", "petal"),
+    ("2005 old richton road", "petal"): ("2005 old richton rd", "petal"),
+    ("1224 east fortification street", "jackson"): ("1224 e fortification st", "jackson"),
+    ("128 east commerce street", "aberdeen"): ("128 e commerce st", "aberdeen"),
+    ("1315 24th street", "mccomb"): ("1315 24th st", "mccomb"),
+    ("116 west main street", "louisville"): ("116 w main st", "louisville"),
+    ("4400 hardy st", "hattiesburg"): ("4400 hardy street", "hattiesburg"),
+    ("100 106 business park drive", "ridgeland"): ("100 business park dr", "ridgeland"),
+    ("5 shenandoah drive", "hattiesburg"): ("9 shenandoah dr", "hattiesburg"),
+    ("321 2nd street", "columbia"): ("321 2nd st", "columbia"),
+    ("1010 s 17th ave", "hattiesburg"): ("1010 s 17th avenue", "hattiesburg"),
+    # 2026-09-08 Crexi lease spellings
+    ("3420 goodman rd w", "horn lake"): ("3420 goodman rd", "horn lake"),
+    ("1220 north shore parkway", "brandon"): ("1220 n shore pkwy", "brandon"),
+    ("176 east center street", "hernando"): ("176180 e center st", "hernando"),
+    ("3506 washington avenue", "gulfport"): ("3506 washington ave", "gulfport"),
+    ("1881 nail road", "horn lake"): ("1881 nail rd w", "horn lake"),
+    ("4300 b west railroad street", "gulfport"): ("4300 b w railroad street", "gulfport"),
+    ("325 hwy 51", "ridgeland"): ("325 highway 51", "ridgeland"),
 }
 
 def akey(addr, city):

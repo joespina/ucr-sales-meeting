@@ -15,7 +15,7 @@ import json, re, sys, datetime
 
 SALE_IN, OUT = sys.argv[1], sys.argv[2]
 LEASE_IN = sys.argv[3] if len(sys.argv) > 3 else None
-EXPORT_DATE = datetime.date(2026, 9, 1)
+EXPORT_DATE = datetime.date(2026, 9, 8)
 # Sale photos hang off /assets/, lease photos off /lease-assets/; the raw files carry
 # whichever prefix the card had, so only the common part is prepended here.
 IMGBASE = "https://crexi.com/images/format=auto,width=620,height=400,fit=cover/"
@@ -39,7 +39,8 @@ COUNTY = {"Natchez":"Adams","Hattiesburg":"Forrest","Jackson":"Hinds","Myrtle":"
  "Gulfport":"Harrison","Forest":"Scott","Vicksburg":"Warren","Terry":"Hinds","Biloxi":"Harrison",
  "Hazlehurst":"Copiah","Madison":"Madison","Magee":"Simpson","Magnolia":"Pike"}
 
-TYPES = ["Retail","Office","Industrial","Land","Multifamily","Mixed Use","Hospitality","Flex","Special Purpose"]
+TYPES = ["Retail","Office","Industrial","Land","Multifamily","Mixed Use","Hospitality","Flex","Special Purpose",
+         "Self Storage","Mobile Home Park","Senior Living"]
 
 def classify(spec):
     s = spec.lower()

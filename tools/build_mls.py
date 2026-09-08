@@ -14,7 +14,7 @@ LAND_SF below lists the records verified against their own descriptions.
 import json, re, sys, datetime
 
 RAW, DATES, DETAILS, OUT = sys.argv[1:5]
-MEETING = datetime.date(2026, 9, 2)
+MEETING = datetime.date(2026, 9, 9)
 BASE = "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/"
 PHOTO = "https://cdn.photos.sparkplatform.com/"
 
@@ -30,6 +30,10 @@ SC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketi
            "saleDate","salePrice","pricePerSF","capRate","saleType","saleConditions","tenant","yearBuilt",
            "submarket","contact","office","mlsNum","source","costarUrl","mlsUrl","mapUrl","photoUrl","notes"]
 
+LC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketingName","tenant","size",
+           "totalSize","signDate","leaseType","term","commenceDate","executionDate","landlord","broker","office",
+           "askingRate","yearBuilt","submarket","mlsNum","source","costarUrl","mlsUrl","mapUrl","photoUrl","notes"]
+
 def rec(keys,d): return {k: d.get(k, False if k=="isLand" else "") for k in keys}
 def mapurl(a,c): return "https://www.google.com/maps/search/?q=" + '+'.join(re.sub(r'[^A-Za-z0-9 ]',' ',(a+' '+c+' MS')).split())
 
@@ -43,12 +47,17 @@ COUNTY = {"McComb":"Pike","Pearl":"Rankin","Brandon":"Rankin","Pickens":"Holmes"
 # Each one checked against its own listing description.
 # ListingId -> dashboard type, where the description contradicts the keyword guess.
 TYPE_FIX = {
+ "3186146": "Industrial",   # mini storage + boat storage facility, not a bare parcel
+ "4161239": "Mixed Use",    # "waterfront mixed-use commercial & residential", 3-story
+ "4157886": "Multifamily",  # The Retreat Apartments, 100% occupied investment sale
  "4145662": "Industrial",   # a metal building on 4.5 acres, not a bare parcel
  "4104371": "Commercial",   # "multi use building, gutted and ready for build-out"
  "4152716": "Land",         # commercial parking lot
  "4139275": "Multifamily",  # mobile home park investment
 }
 LAND_SF = {
+ "4144121": ("4.8 AC", ""),      # "Estimated 4.8 acres of commercial land" - 209,305 SF is the LOT
+ "3186146": ("2.4 AC", ""),      # "Approx. 2.4 acres on busy Lemoyne Blvd" - 104,544 SF is the LOT
  "4160779": ("1.6 AC", ""),      # "1.6 ACRES ON HWY 51 NORTH"
  "4160229": ("1.4 AC", ""),      # "1.4± Acres | C-2 General Commercial"
  "4003595": ("1.0 AC", ""),      # "1 acre of commercial land"
@@ -98,7 +107,7 @@ si = li = ci = 0
 skipped = []
 
 for section, p in parse_pipe(RAW):
-    lid, key, ptype, status, st, addr, city, zp, price, sf, beds, photo = (p + [''] * 12)[:12]
+    lid, key, ptype, status, st, addr, city, zp, price, sf, beds, photo, listprice = (p + [''] * 13)[:13]
     if st != 'MS':
         skipped.append((lid, addr, city, st, 'not Mississippi')); continue
     if ptype not in ('E', 'F'):
@@ -126,25 +135,46 @@ for section, p in parse_pipe(RAW):
                   type=ty, isLand=is_land, size=bsf, lotSize=lot,
                   contact=agent, office=office, source='mls', mlsNum=lid,
                   mlsUrl=BASE + key, mapUrl=mapurl(addr, city),
-                  photoUrl=(PHOTO + photo) if photo else '')
+                  photoUrl=(photo if photo.startswith('http') else (PHOTO + photo)) if photo else '')
 
     if 'CLOSED' in section.upper():
-        ci += 1
-        # MLS United's IDX feed does NOT publish a sold price. `clusters` has no
-        # ClosePrice field at all, and CurrentPrice == ListPrice on closed records
-        # (verified 2026-09-01 on 4141839: both 1,275,000, and the detail page shows
-        # the same single figure). Putting that number in the Sale Price column would
-        # assert a sold price we do not have, which is worse for a comp than a blank.
-        # Leave salePrice empty and state the last list price in the notes.
-        lp = f"${int(float(price)):,}" if price else ''
-        saleComps.append(rec(SC_KEYS, dict(common, id=f"mc{ci}",
-            saleDate=dates.get('C' + lid, '') or dates.get(lid, ''),
-            salePrice='',
-            notes=' · '.join(notes + [
-                (f'Last list price {lp} - MLS United does not publish sold prices in its IDX feed, '
-                 'so this is NOT the sale price' if lp else
-                 'MLS United does not publish sold prices in its IDX feed'),
-                'Closed sale reported by MLS United']))))
+        # CurrentPrice IS the sale price on a closed MLS record. Established
+        # 2026-09-08 by elimination: CurrentPrice diverges from ListPrice ONLY
+        # after a listing closes -- 0 of 75 actives listed over three months
+        # differ, 0 of 5 pendings differ, and 9 of 13 closed do. MLS United's own
+        # IDX detail page renders that figure as the headline price on a Closed
+        # listing (4152925: list 299,900, CurrentPrice 263,000, page shows
+        # $263,000). This REVERSES the 2026-09-01 conclusion, which was drawn
+        # from a single record where the two happened to be equal.
+        sp = f"${int(float(price)):,}" if price else ''
+        lp = f"${int(float(listprice)):,}" if listprice else ''
+        sold_at_ask = (price and listprice and float(price) == float(listprice))
+        pnote = []
+        if sp and lp and not sold_at_ask:
+            pnote.append(f'Closed at {sp} against a {lp} list price')
+        elif sp and sold_at_ask:
+            pnote.append(f'Closed at the {sp} asking price')
+        elif sp:
+            pnote.append(f'Closed at {sp}')
+        else:
+            pnote.append('Sale price not published by MLS United')
+        psf = ''
+        if price and sf and float(sf) > 0 and lid not in LAND_SF:
+            psf = f"{float(price)/float(sf):.2f}"
+        cdate = dates.get('C' + lid, '') or dates.get(lid, '')
+        if ptype == 'F':
+            ci += 1
+            leaseComps.append(rec(LC_KEYS, dict(common, id=f"mlc{ci}",
+                signDate=cdate, askingRate=(f"{int(float(price)):,}" if price else ''),
+                leaseType='monthly rate', broker=agent,
+                notes=' \u00b7 '.join(notes + [
+                    'Lease closed/completed as reported by MLS United',
+                    'Rate is the monthly rent at close as published by MLS United']))))
+        else:
+            ci += 1
+            saleComps.append(rec(SC_KEYS, dict(common, id=f"mc{ci}",
+                saleDate=cdate, salePrice=sp, pricePerSF=psf,
+                notes=' \u00b7 '.join(notes + pnote + ['Closed sale reported by MLS United']))))
         continue
 
     pending = 'PENDING' in section.upper()
@@ -153,7 +183,7 @@ for section, p in parse_pipe(RAW):
                 listDate=('' if pending else listDate),
                 domLabel=('Under Contract' if pending else ('' if listDate else 'N/A')))
     if pending:
-        notes.append('Under contract - went pending between Aug 24 and Aug 31; not available')
+        notes.append('Under contract - went pending between Aug 31 and Sep 7; not available')
     if ptype == 'E':
         si += 1
         forSale.append(rec(FS_KEYS, dict(base, id=f"ms{si}",
@@ -161,14 +191,65 @@ for section, p in parse_pipe(RAW):
             notes=' · '.join(notes))))
     else:
         li += 1
+        # MLS United publishes one lease figure with no unit attached. It is USUALLY the
+        # monthly total, but agents also enter an annual $/SF rate in the same field --
+        # 4161218 came through as 25 on a 4,300 SF medical suite (2026-09-08), which is
+        # not a credible monthly rent and reads as $25/SF/yr. Rather than pick a unit we
+        # cannot confirm, say so on the card: never state a rate we have not verified.
+        # A non-numeric askingRate is passed through verbatim by rateText() in index.html.
+        amb = bool(price) and float(price) < 100
+        if amb:
+            rate = f"{float(price):g} — unit not stated by MLS"
+            ltype = ''
+            rnote = (f'MLS United published this rate as "{float(price):g}" with no unit attached. '
+                     'That is too low to be a monthly total for a space this size, so it most '
+                     f'likely means ${float(price):g}/SF/year — confirm with the listing agent '
+                     'before quoting it.')
+        else:
+            rate = f"{int(float(price)):,}" if price else ''
+            ltype = 'monthly rate'
+            rnote = 'Rate is the monthly asking rent as published by MLS United'
         forLease.append(rec(FL_KEYS, dict(base, id=f"mls{li}",
-            askingRate=(f"{int(float(price)):,}" if price else ''),
-            leaseType='monthly rate',
-            notes=' · '.join(notes + ['Rate is the monthly asking rent as published by MLS United']))))
+            askingRate=rate, leaseType=ltype,
+            notes=' · '.join(notes + [rnote]))))
+
+# ---- consolidate multiple suites at one address into one card -------------------
+# Standing rule: one card per property. MLS lists each suite separately -- 168 Cowart
+# Street came through as suites 6, 8 and 10 on 2026-09-08, three near-identical rows.
+# Group on the address with its trailing suite token stripped; only collapse when a
+# group actually has more than one member, so a lone ", Suite B" keeps its label.
+def suite_base(addr):
+    return re.sub(r',\s*(suite\s+)?[\w-]+\s*$', '', addr, flags=re.I).strip()
+
+def consolidate(rows, rate_key):
+    groups = {}
+    for r in rows:
+        groups.setdefault((suite_base(r['address']).lower(), r['city'].lower()), []).append(r)
+    out = []
+    for g in groups.values():
+        if len(g) == 1:
+            out.append(g[0]); continue
+        r = dict(g[0])
+        r['address'] = suite_base(g[0]['address'])
+        def span(vals, fmt):
+            n = sorted({int(re.sub(r'[^0-9]', '', v)) for v in vals if re.search(r'\d', v)})
+            if not n: return ''
+            return fmt.format(n[0]) if len(n) == 1 else (fmt.format(n[0]) + ' - ' + fmt.format(n[-1]))
+        r['size'] = span([x['size'] for x in g], '{:,} SF')
+        r[rate_key] = span([x[rate_key] for x in g], '{:,}')
+        suites = ', '.join(x['address'].split(',')[-1].strip() for x in g if ',' in x['address'])
+        r['notes'] = ' \u00b7 '.join([x for x in [g[0]['notes'],
+            f'{len(g)} suites listed separately on MLS United at this address ({suites}), '
+            'consolidated into one card',
+            'MLS#s ' + ', '.join(x['mlsNum'] for x in g)] if x])
+        out.append(r)
+    return out
+
+forLease = consolidate(forLease, 'askingRate')
 
 json.dump(dict(forSale=forSale, forLease=forLease, saleComps=saleComps, leaseComps=leaseComps),
           open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-print('forSale', len(forSale), 'forLease', len(forLease), 'saleComps', len(saleComps))
+print('forSale', len(forSale), 'forLease', len(forLease), 'saleComps', len(saleComps), 'leaseComps', len(leaseComps))
 print('skipped:', skipped)
 print('missing listDate:', [r['mlsNum'] for r in forSale + forLease if not r['listDate'] and r['domLabel'] != 'Under Contract'])
 print('missing photo:', [r['mlsNum'] for r in forSale + forLease + saleComps if not r['photoUrl']])
