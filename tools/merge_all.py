@@ -48,7 +48,8 @@ ALIASES = {
     ("34033405 pemberton square boulevard", "vicksburg"): ("3405 pemberton sq", "vicksburg"),
     # Crexi lists the 44.5-acre Starkville tract on Bardwell Road; CoStar calls it
     # Blackjack Rd. Same listing - "44.5 Acres At the Gates of Mississippi State".
-    ("bardwell road", "starkville"): ("blackjack rd", "starkville"),
+    ("bardwell road", "starkville"): ("blackjack rd", "starkville"),   # verified: Crexi's
+    # page for the 44.5-acre tract names both roads (corner parcel)
     ("1313 carterville road", "petal"): ("1313 carterville rd", "petal"),
     ("2005 old richton road", "petal"): ("2005 old richton rd", "petal"),
     ("1224 east fortification street", "jackson"): ("1224 e fortification st", "jackson"),

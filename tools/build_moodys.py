@@ -59,15 +59,33 @@ def acres(v):
     return m.group(1) + ' AC' if m else ''
 
 # --- the property-id / photo map -------------------------------------------------
-pid, photo = {}, {}
+pid, photo, mapaddr = {}, {}, {}
 for line in open(MAP_IN):
     line = line.rstrip('\n')
     if not line or line.startswith('#'): continue
     p = line.split('|')
     ident, img = p[1].replace('-', ''), p[4] if len(p) > 4 else ''
+    street = (p[3].split(',')[0].strip() if len(p) > 3 else '')
     for lid in p[2].split('/'):
         pid[lid] = ident
         photo[lid] = (CDN + img) if img else ''
+        mapaddr[lid] = street
+
+# Moody's PDF sometimes prints the broker's HEADLINE on the address line instead of the
+# street: 45557987 came through as "Shopping Center FOR SALE, Hattiesburg, MS, 39402"
+# (2026-09-08), which is not an address, breaks the one-card-per-property merge and shows
+# nonsense on the card. The property record from Moody's own API has the real street, and
+# it is already in the map file -- prefer it when the PDF line does not look like one.
+STREETISH = re.compile(r"^(?:\d|[NSEW]\s|Highway|Hwy|Old\s|County\s|Co\s+Rd|Lot\s|Route|US[-\s]|MS[-\s])", re.I)
+
+def best_addr(pdf_addr, lids):
+    if pdf_addr and STREETISH.match(pdf_addr.strip()):
+        return pdf_addr
+    for l in lids:
+        m = mapaddr.get(l, '')
+        if m and STREETISH.match(m):
+            return m          # Moody's own property record, not a guess
+    return pdf_addr
 
 rows = json.load(open(PDF_IN))
 
@@ -109,7 +127,7 @@ def contact_of(r):
 
 groups = {}
 for r in rows:
-    addr = clean_addr(r['address'], r['city'], r['zip']) or r['marketing']
+    addr = best_addr(clean_addr(r['address'], r['city'], r['zip']), [r['listingId']]) or r['marketing']
     key = (r['deal'] or 'Lease', norm(addr), norm(r['city']))
     groups.setdefault(key, []).append(r)
 
@@ -118,8 +136,8 @@ si = li = 0
 for (deal, _a, _c), g in groups.items():
     r0 = g[0]
     kv = r0['kv']
-    addr = clean_addr(r0['address'], r0['city'], r0['zip']) or r0['marketing']
     lids = [x['listingId'] for x in g]
+    addr = best_addr(clean_addr(r0['address'], r0['city'], r0['zip']), lids) or r0['marketing']
     ident = next((pid[l] for l in lids if l in pid), '')
     img = next((photo[l] for l in lids if photo.get(l)), '')
     ptype = TYPE.get(kv.get('Property Type', ''), kv.get('Property Type', ''))

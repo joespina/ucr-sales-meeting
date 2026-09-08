@@ -7,7 +7,9 @@ The window is the **8 days ending the Tuesday before the meeting** (2026-08-26 u
 2026-09-02 used Aug 24–31, which Jo set in the links she sent).
 Confirm the window with Jo if it matters; she sets it. Anything that also appeared in the
 previous week's report gets a note **"Also appeared in the <date> report"** rather than being
-dropped — she chose labelled repeats over silent gaps.
+dropped — she chose labelled repeats over silent gaps. **`tools/mark_repeats.py` does this**;
+run it after `merge_all` and before `apply_block`. It went unimplemented until 2026-09-08, when
+a re-check found 16 unlabelled repeats already deployed.
 
 ---
 
@@ -116,6 +118,7 @@ grinding. Full detail in `tools/browser_pulls.md`.
 python3 tools/merge_all.py build/records_20260902.json \
         build/costar.json build/mls.json build/moodys.json build/crexi.json
 python3 tools/near_dupes.py build/records_20260902.json      # eyeball, add ALIASES if needed
+python3 tools/mark_repeats.py build/records_20260902.json index.html 20260826 "August 26, 2026"
 python3 tools/apply_block.py 20260902 "September 2, 2026" build/records_20260902.json \
         index.html build/coverage_20260902.html
 ./tools/validate.sh 20260902
