@@ -209,6 +209,27 @@ def merge(out_path, sources):
     for a in ARRAYS:
         out[a] = [fix_land_flag(r) for r in out[a]]
 
+    # A property offered BOTH for sale and for lease gets a card in each array, and each
+    # card should point at the other. build_costar fills alsoForLease/alsoForSale within
+    # its own export, but nothing did it ACROSS sources: 2200 Cole Rd, Horn Lake was on
+    # Moody's for sale and for lease and neither card mentioned the other (2026-09-15).
+    _si = {(akey(r.get("address"), r.get("city"))): r for r in out["forSale"]}
+    _li = {(akey(r.get("address"), r.get("city"))): r for r in out["forLease"]}
+    for k in set(_si) & set(_li):
+        srec, lrec = _si[k], _li[k]
+        if not srec.get("alsoForLease"):
+            rate = str(lrec.get("askingRate") or "").strip()
+            unit = str(lrec.get("leaseType") or "").strip()
+            avail = str(lrec.get("avail") or lrec.get("size") or "").strip()
+            desc = ("%s available" % avail) if avail else "space available"
+            if rate and not rate[0].isdigit(): desc += ", %s" % rate
+            elif rate:                          desc += " at $%s%s" % (rate, (" " + unit) if unit else "")
+            elif unit:                          desc += ", %s" % unit.lower()
+            else:                               desc += ", rate withheld"
+            srec["alsoForLease"] = desc
+        if not lrec.get("alsoForSale"):
+            lrec["alsoForSale"] = srec.get("price") or "asking price not published"
+
     # newest first, so the top of each tab is this week's freshest activity
     out["forSale"].sort(key=lambda r: r.get("listDate", ""), reverse=True)
     out["forLease"].sort(key=lambda r: r.get("listDate", ""), reverse=True)
