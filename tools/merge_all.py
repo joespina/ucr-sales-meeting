@@ -96,10 +96,62 @@ def akey(addr, city):
     k = (norm(addr), norm(city))
     return ALIASES.get(k, k)
 
+def fix_land_flag(r):
+    """`isLand` must agree with `type` on the MERGED record. 906 Sixth Ave, Picayune
+    is a 4,455 SF former doctor's office on CoStar and MLS, and bare "Land | 0.75
+    acres" on Crexi; merging filled the empty CoStar `isLand` from Crexi and the card
+    showed a Land badge on an Office (found 2026-09-15). The type is decided by the
+    source that has the most detail, so derive the flag from it rather than keeping
+    whichever source set it first."""
+    r["isLand"] = "land" in str(r.get("type") or "").lower()
+    return r
+
+
+def _num(v):
+    m = re.match(r"[^\d]*([\d,.]+)", str(v or ""))
+    try: return float(m.group(1).replace(",", "")) if m else None
+    except ValueError: return None
+
+
+UNIT = {
+    # CoStar carries the STRUCTURAL lease type where Moody's carries the unit, and both
+    # mean "$ per square foot per year". Reading them as different units is what let a
+    # $23.00 vs $30.00 disagreement on 272 Calhoun Station Pkwy through on 2026-09-15.
+    "$/sf/year": "sfyr", "per sf year": "sfyr", "nnn": "sfyr", "n": "sfyr",
+    "nn": "sfyr", "absolute nnn": "sfyr", "mg": "sfyr", "modified gross": "sfyr",
+    "fs": "sfyr", "full service": "sfyr", "gross": "sfyr", "annual/sf": "sfyr",
+    "$/sf/month": "sfmo", "per sf month": "sfmo",
+    "monthly rate": "mo", "monthly": "mo", "annual rate": "yr",
+}
+
+
+def _same_rate(a, b, k):
+    """Two lease rates in different UNITS are not necessarily a disagreement. 2446 Caffey
+    St is $30.38/SF/Year on CoStar and $2.53/SF/Month on Crexi (x12 = $30.36); 1414 25th
+    Ave is $1,000/month on Moody's and $4.83-$7.30/SF/Month on Crexi across 137-207 SF
+    suites. Both agree. Only a TOTAL-versus-per-SF pair is genuinely incomparable without
+    the suite size -- everything else is converted and compared."""
+    if k != "askingRate":
+        return False
+    ua = UNIT.get(str(a.get("leaseType") or "").strip().lower())
+    ub = UNIT.get(str(b.get("leaseType") or "").strip().lower())
+    na, nb = _num(a.get(k)), _num(b.get(k))
+    if not na or not nb or not ua or not ub:
+        return True                       # can't compare -- don't cry wolf
+    per_sf = lambda u: u in ("sfyr", "sfmo")
+    if per_sf(ua) != per_sf(ub):
+        return True                       # a total vs a per-SF rate: needs the suite size
+    to_year = {"sfyr": 1, "sfmo": 12, "yr": 1, "mo": 12}
+    va, vb = na * to_year[ua], nb * to_year[ub]
+    hi, lo = max(va, vb), min(va, vb)
+    return (hi - lo) / hi < 0.05          # within 5% is the same rate, differently rounded
+
+
 def merge(out_path, sources):
     out = {a: [] for a in ARRAYS}
     index = {a: {} for a in ARRAYS}
     merged = []
+    conflicts = []
 
     for path in sources:
         if not os.path.exists(path):
@@ -113,6 +165,27 @@ def merge(out_path, sources):
                     seen, toks = set(), []
                     for s in (tgt.get("source", "") + "," + r.get("source", "")).split(","):
                         if s and s not in seen: seen.add(s); toks.append(s)
+                    # A SILENTLY DISCARDED CONFLICT IS THE DANGEROUS CASE.
+                    # The fill-in loop below only writes into empty fields, so when two
+                    # sources publish DIFFERENT asking prices or rates for the same
+                    # property the second one vanishes and the card states one figure as
+                    # if it were uncontested. 272 Calhoun Station Pkwy was $23.00/SF/yr on
+                    # CoStar and $30.00/SF/yr on Moody's for the same 1,635 SF suite
+                    # (2026-09-15) and the card showed $23.00 alone. Say so on the card
+                    # instead; the broker needs to know the sources disagree.
+                    for k, label in (("price", "asking price"), ("askingRate", "asking rate"),
+                                     ("salePrice", "sale price")):
+                        a_val, b_val = str(tgt.get(k) or "").strip(), str(r.get(k) or "").strip()
+                        if a_val and b_val and a_val != b_val and not _same_rate(tgt, r, k):
+                            conflicts.append((a, tgt["id"], tgt.get("address"), label, a_val, b_val))
+                            unit = lambda x: (" " + str(x.get("leaseType")).strip()
+                                              if k == "askingRate" and x.get("leaseType") else "")
+                            msg = ("Sources disagree on the %s: %s%s per %s, %s%s per %s — shown "
+                                   "as the first; confirm before quoting"
+                                   % (label, a_val, unit(tgt), tgt.get("source", "?").split(",")[0],
+                                      b_val, unit(r), r.get("source", "?")))
+                            if msg not in tgt.get("notes", ""):
+                                tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + msg
                     for k, v in r.items():
                         if k in ("id", "source", "notes"): continue
                         if not tgt.get(k) and v: tgt[k] = v
@@ -133,6 +206,9 @@ def merge(out_path, sources):
             if r.get("listDate") and r.get("domLabel") == "N/A":
                 r["domLabel"] = ""
 
+    for a in ARRAYS:
+        out[a] = [fix_land_flag(r) for r in out[a]]
+
     # newest first, so the top of each tab is this week's freshest activity
     out["forSale"].sort(key=lambda r: r.get("listDate", ""), reverse=True)
     out["forLease"].sort(key=lambda r: r.get("listDate", ""), reverse=True)
@@ -144,6 +220,10 @@ def merge(out_path, sources):
     print("counts:", {a: len(out[a]) for a in ARRAYS})
     print("cross-source merges:", len(merged))
     for x in merged: print("  merged", x)
+    if conflicts:
+        print("SOURCES DISAGREE on a headline figure (%d) -- noted on the card:" % len(conflicts))
+        for a, i, addr, label, av, bv in conflicts:
+            print("   %s/%s %s: %s %s vs %s" % (a, i, addr, label, av, bv))
     return out
 
 if __name__ == "__main__":

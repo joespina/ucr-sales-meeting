@@ -69,6 +69,16 @@ def build(path, keys, kind, start=0):
         size = (m.group(1) + ' SF') if m else ''
         m = re.search(r'([\d.]+)\s*(?:acres|AC)\b', spec, re.I)
         lot = (m.group(1) + ' AC') if m else ''
+        # On a LAND listing Crexi's square footage is the PARCEL, not a building.
+        # Cold Spgs Rd, Moss Point published "Land,Mixed Use,Special Purpose | 887,460 SF"
+        # on 2026-09-15 and it landed in `size`, so the card claimed an 887,460 SF
+        # building on a bare tract. Move it to lotSize, in acres.
+        if ty == 'Land' and size and not lot:
+            _sf = float(size.replace(',', '').replace(' SF', ''))
+            lot = ('%.2f AC' % (_sf / 43560)) if _sf > 5000 else ''
+            size = ''
+        elif ty == 'Land' and size and lot:
+            size = ''
         # numeric only: the dashboard appends the % sign
         m = re.search(r'([\d.]+)\s*%\s*CAP', spec, re.I)
         cap = m.group(1) if m else ''

@@ -150,6 +150,25 @@ for (deal, _a, _c), g in groups.items():
         # Land listings carry no "Property Type" row; the page header does ("Land For Sale").
         h = re.sub(r'\s+(?:For (?:Sale|Lease)|Sublease)$', '', r0.get('header', '')).strip()
         ptype = TYPE.get(h, h)
+
+    # Moody's says "Land" on plenty of records that are plainly buildings, and its own
+    # data contradicts itself when it does (found 2026-09-15):
+    #   111 Mable St  -> Property Type "Land", Sub Type "Multi-Family",
+    #                    header "Multi-Family For Sale", Building Size 2,338 SF  (a 4-plex)
+    #   500 Hwy 8 E   -> header "Land For Sale", subtype label "Land: Retail",
+    #                    Building Size 22,092 SF  (a Piggly Wiggly)
+    # A record that reports a Building Size is not land. Prefer the sub type, then the
+    # header, then the subtype label's own ":" suffix, and only fall back to "Commercial".
+    if ptype == 'Land' and kv.get('Building Size'):
+        alt = ''
+        for cand in (kv.get('Sub Type', ''),
+                     re.sub(r'\s+(?:For (?:Sale|Lease)|Sublease)$', '', r0.get('header', '')).strip(),
+                     (r0.get('subtypeLabel', '') or '').split(':')[-1].strip()):
+            t = TYPE.get(cand, cand)
+            if t and t != 'Land':
+                alt = t; break
+        ptype = alt or 'Commercial'
+
     is_land = ptype == 'Land'
     dates = sorted(iso(x['kv'].get('Date Listed', '')) for x in g if iso(x['kv'].get('Date Listed', '')))
     listDate = dates[-1] if dates else ''
