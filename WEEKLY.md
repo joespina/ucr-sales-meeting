@@ -158,27 +158,53 @@ PY
 
 ## 6. Deploy
 
-`git commit` locally for history, then push through the browser (the sandbox proxy blocks `git push`):
+`git push` works — but from **`device_bash` on Jo's local VM**, never from the cloud sandbox
+(the sandbox's egress proxy strips credentials; that is the whole of the old blocker, and it is
+not an auth problem, so do not go hunting for tokens). Solved 2026-09-08; the browser
+"Upload files" path below it is dead and is kept only as history in
+[[feedback-github-deploy]] — `file_upload` cannot reach container files at all.
 
-1. `cp index.html /mnt/user-data/outputs/index.html`
-2. Open `https://github.com/joespina/ucr-sales-meeting/upload/main`
-3. `find` the file input ("Choose your files"), then `file_upload` that path — this reads the exact
-   bytes off disk. **Never** retype file content or base64 through `javascript_tool`: it silently
-   drops characters and corrupts large payloads.
-4. Fill the commit message and description. **Re-screenshot before clicking** — the window resizes
-   between calls and stale coordinates miss the fields silently. Confirm "Commit directly to `main`".
-5. Verify: Actions run green, then
+Getting the built file onto that VM is two hops:
+
+1. `SendUserFile` the finished `index.html` → returns a `file_uuid`.
+2. `device_commit_files` with that `fileUuid` and a `devicePath` in the connected folder.
+
+Ship `tools/` and `WEEKLY.md` changes as **one cumulative patch cut against the repo's current
+remote HEAD**, applied to a clean checkout. Chaining incremental patches fails — the second is
+cut against a tree the first already changed.
+
+```bash
+# container
+git diff <remote-HEAD> HEAD -- tools/ WEEKLY.md > /mnt/user-data/outputs/all.patch
+```
+
+```bash
+# device_bash
+cd "$HOME" && rm -rf dep && mkdir dep && cd dep
+TOK=$(tr -d '\r\n' < "$HOME/mnt/UCR Sales Meeting Project/.deploy/github-token")
+git clone -q "https://x-access-token:${TOK}@github.com/joespina/ucr-sales-meeting.git" repo
+cd repo && git checkout -- . && git clean -fd -q
+cp "$HOME/mnt/UCR Sales Meeting Project/index.html" index.html
+git apply "$HOME/mnt/UCR Sales Meeting Project/.deploy/all.patch"
+sha256sum index.html                    # must equal the container's
+git add -A && git commit -q -m "..." && git push origin main 2>&1 | sed "s/${TOK}/***/g"
+```
+
+**Always pipe git output through `sed "s/${TOK}/***/g"`** — clone and push echo the remote URL
+with the token in it.
+
+Verify, all from the same shell:
 
 ```bash
 curl -s -o /tmp/live.html https://raw.githubusercontent.com/joespina/ucr-sales-meeting/main/index.html
-diff <(shasum -a 256 /tmp/live.html | cut -d' ' -f1) <(shasum -a 256 index.html | cut -d' ' -f1) \
-  && echo "byte-for-byte identical"
+shasum -a 256 /tmp/live.html            # compare to the built file
+curl -s -H "Authorization: Bearer $TOK" \
+  "https://api.github.com/repos/joespina/ucr-sales-meeting/actions/runs?per_page=1" \
+  | python3 -c "import json,sys;r=json.load(sys.stdin)['workflow_runs'][0];print(r['run_number'],r['head_sha'][:7],r['status'],r['conclusion'])"
 ```
 
-6. Hard-reload the live site and confirm the new meeting is selected with the right counts.
-7. Write the file back to Jo's disk with `device_commit_files`.
-
----
+Then hard-reload the live site and confirm the new meeting is selected with the right counts.
+The copy written to Jo's disk in step 1 is the one she keeps; it is already there.
 
 ## Standing rules — these came from Micah and Jo, do not quietly relax them
 

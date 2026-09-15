@@ -24,7 +24,7 @@ without it.
 """
 import datetime
 
-EXPORT_DATE = datetime.date(2026, 9, 8)
+EXPORT_DATE = datetime.date(2026, 9, 15)
 import json, re, sys
 
 if len(sys.argv) < 4:
@@ -58,6 +58,24 @@ def rec(keys,d): return {k: d.get(k, False if k=="isLand" else "") for k in keys
 
 CITY_ST = re.compile(r'^[A-Z][A-Za-z .\'-]+,\s*[A-Z]{2}$')
 
+STREET_RE = re.compile(
+    r"""^(?:\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?\s|              # 506 ... / 1001-1016 ... / 115A ...
+          (?:US|MS|I|SR|CR)[- ]\d|                          # US-51, MS-589, I-55
+          (?:N|S|E|W)\s+(?:US|MS|Hwy|Highway)\s|
+          (?:Hwy|Highway|County\s+Road|CR)\s)""",
+    re.I | re.X)
+STREET_SUFFIX = re.compile(
+    r"\b(?:Rd|Road|St|Street|Ave|Avenue|Dr|Drive|Blvd|Boulevard|Ln|Lane|Hwy|Highway|"
+    r"Pkwy|Pky|Parkway|Way|Cir|Circle|Ct|Court|Pl|Place|Trl|Trail|Sq|Square|Loop|Ter|Terrace|"
+    r"Cv|Cove|Xing|Crossing|Ext|Exd|Byp|Bypass)\.?$", re.I)
+
+def looks_like_street(s):
+    """Does this half of a CoStar title read as a street address?"""
+    s = s.strip()
+    if not s:
+        return False
+    return bool(STREET_RE.match(s) or STREET_SUFFIX.search(s))
+
 def split_title(t):
     # Split at the LAST ' - ': the address itself can contain one
     # (e.g. "100 - 104 Business Park Dr - 100-104 Business Park").
@@ -66,12 +84,25 @@ def split_title(t):
     # and splitting at the last ' - ' then puts "Dollar General" INSIDE the
     # address, which breaks cross-source dedup -- the exact failure the
     # last-' - ' rule exists to prevent. Step back over a trailing "City, ST".
+    # A right-margin property-type label can WRAP onto the title line and be
+    # captured with it ("Staybridge Suites Jackson - 801 Ridgewood Rd     Upscale",
+    # where the type is "Upscale Hotel" split over two lines, found 2026-09-15).
+    # No real title carries a run of 3+ spaces, so cut there.
+    t = re.split(r'\s{3,}', t.strip())[0].strip()
     parts = t.split(' - ')
     if len(parts) == 1:
         return t.strip(), ''
     if len(parts) > 2 and CITY_ST.match(parts[-1].strip()):
-        return ' - '.join(parts[:-2]).strip(), ' - '.join(parts[-2:]).strip()
-    return ' - '.join(parts[:-1]).strip(), parts[-1].strip()
+        addr, mk = ' - '.join(parts[:-2]).strip(), ' - '.join(parts[-2:]).strip()
+    else:
+        addr, mk = ' - '.join(parts[:-1]).strip(), parts[-1].strip()
+    # CoStar usually writes "<street> - <marketing name>", but a hotel/flagged
+    # property can come through reversed ("Staybridge Suites Jackson - 801
+    # Ridgewood Rd"). Swap only when the tail reads as a street and the head
+    # does not -- same failure class as the Moody's headline-for-address bug.
+    if mk and not looks_like_street(addr) and looks_like_street(mk):
+        addr, mk = mk, addr
+    return addr, mk
 
 def clean(kv):
     return {k:v for k,v in kv.items() if 'Mississippi' not in k}
@@ -201,10 +232,31 @@ def size_range(g):
     lo, hi = min(sizes), max(sizes)
     return '{:,} SF'.format(lo) if lo == hi else '{:,} - {:,} SF'.format(lo, hi)
 
+RESI_USE = re.compile(r'resid|single\s*fam|duplex|townhome|subdivision', re.I)
+
+def residential_use(kv):
+    """Standing rule: no residential in any array, from any source. CoStar puts
+    the giveaway in its own fields -- 110 E Ford St, Ridgeland (2026-09-15) was
+    Current Use "Residential", Proposed Use "Single Family Development", Zoning
+    R-1, listed on a commercial export as Land. Zoning alone is NOT the test
+    (a commercial building can sit on oddly zoned land, and Multifamily is CRE);
+    the stated current or proposed USE is."""
+    for k in ('Current Use', 'Proposed Use'):
+        v = str(kv.get(k, ''))
+        if RESI_USE.search(v):
+            return '%s = %s' % (k, v)
+    return ''
+
+DROPPED_RESI = []
+
 forSale=[]; i=0
 for key,g in groups.items():
     b,addr,mk = g[0]
     kv=merge_kv(g)
+    _why = residential_use(kv)
+    if _why:
+        DROPPED_RESI.append('forSale: %s, %s (%s)' % (addr, b['city'], _why))
+        continue
     typ=TYPEFIX.get(b['ptype'], b['ptype'])
     isLand = 'land' in typ.lower()
     extra=[]
@@ -301,5 +353,8 @@ if COMPS_IN:
 json.dump(dict(forSale=forSale, forLease=forLease, saleComps=saleComps, leaseComps=leaseComps),
           open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('forSale',len(forSale),'forLease',len(forLease),'saleComps',len(saleComps),'leaseComps',len(leaseComps))
+if DROPPED_RESI:
+    print('DROPPED as residential (%d):' % len(DROPPED_RESI))
+    for x in DROPPED_RESI: print('   -', x)
 print('with price:', sum(1 for r in forSale if r['price']), '/', len(forSale))
 print('with rate :', sum(1 for r in forLease if r['askingRate']), '/', len(forLease))

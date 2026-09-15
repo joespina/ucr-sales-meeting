@@ -17,6 +17,10 @@ Two things to keep straight:
 import json, re, sys
 
 IN, OUT = sys.argv[1], sys.argv[2]
+# The publication window these comps were pulled for. It used to be hardcoded as
+# "Aug 24 and Aug 31" and silently shipped a stale window into every later week's
+# notes (caught 2026-09-15). Pass it as argv[3], e.g. "Sep 7 and Sep 14".
+WINDOW = sys.argv[3] if len(sys.argv) > 3 else 'the report window'
 CDN = "https://img-resized-cache.catylist.com/l1/OG"
 
 SC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketingName","size","lotSize",
@@ -53,7 +57,7 @@ for line in open(IN):
     if sub: notes.append(sub.replace('_', ' ').title())
     if buyer: notes.append('Buyer: ' + buyer)
     if dt: notes.append('Closed ' + dt)
-    notes.append('Published to Moody\'s between Aug 24 and Aug 31; the closing date above is the transaction date')
+    notes.append('Published to Moody\'s between %s; the closing date above is the transaction date' % WINDOW)
     if src == 'ESTIMATION':
         notes.append('Consideration estimated by Moody\'s, not a disclosed contract price')
     out.append(rec(dict(

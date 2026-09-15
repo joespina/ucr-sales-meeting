@@ -54,6 +54,27 @@ ALIASES = {
     ("2005 old richton road", "petal"): ("2005 old richton rd", "petal"),
     ("1224 east fortification street", "jackson"): ("1224 e fortification st", "jackson"),
     ("128 east commerce street", "aberdeen"): ("128 e commerce st", "aberdeen"),
+    # 2026-09-15: same property, different spelling across sources. Each verified by
+    # matching price AND size, not by address resemblance alone.
+    ("906 6th avenue", "picayune"): ("906 sixth ave", "picayune"),          # MLS -> CoStar/Crexi, both $575,000
+    ("4194 hwy 589", "sumrall"): ("4194 ms589", "sumrall"),                 # Crexi -> CoStar, both 25.5 AC unpriced
+    ("0 tchulahoma rd", "hernando"): ("tchulahoma rd", "hernando"),         # Crexi -> CoStar, both 58 AC unpriced
+    ("country club rd", "hattiesburg"): ("0 country club road", "hattiesburg"),  # Moody's -> Crexi, both $79,990
+    ("111 mable st", "hattiesburg"): ("111 mable street", "hattiesburg"),   # Crexi -> Moody's, both $189,900
+    ("3100 us 80", "pearl"): ("3100 hwy 80 e", "pearl"),                    # Crexi -> CoStar, Harbor Freight
+    ("801 ridgewood road", "ridgeland"): ("801 ridgewood rd", "ridgeland"), # Crexi -> CoStar, Staybridge $11.3M
+    ("2022 us72", "corinth"): ("2022 highway 72 e", "corinth"),             # Moody's/Crexi -> CoStar, both $2,711,864
+    # 9008 McLaurin is listed twice on Crexi and once on MLS; the city is spelled
+    # three ways. All three carry $699,000 / 14,000 SF.
+    ("9008 mclaurin st", "bay st louis"): ("9008 mclaurin street", "bay st louis"),
+    ("9008 mclaurin street", "bay saint louis"): ("9008 mclaurin street", "bay st louis"),
+    # CoStar prices the Southaven Hwy 51 tract as "Part of 3-Property Portfolio" at the
+    # same $700,000 Crexi quotes for the 8-lot package at Hwy 51 & Dorchester Dr.
+    ("us51 hwy n", "southaven"): ("hwy 51 dorchester dr", "southaven"),
+    # leases
+    ("2446 caffey street", "hernando"): ("2446 caffey st", "hernando"),
+    ("272 calhoun station parkway", "madison"): ("272 calhoun station pkwy", "madison"),
+    ("207 commonwealth blvd 102", "oxford"): ("207 commonwealth blvd", "oxford"),
     ("1315 24th street", "mccomb"): ("1315 24th st", "mccomb"),
     ("116 west main street", "louisville"): ("116 w main st", "louisville"),
     ("4400 hardy st", "hattiesburg"): ("4400 hardy street", "hattiesburg"),

@@ -39,6 +39,11 @@ def clean_addr(a, city, zp):
     zip and title-case it, or it never dedupes against the same property elsewhere."""
     if not a: return a
     a = re.sub(r'[\s,]+MS\s*\d{5}\s*$', '', a.strip(), flags=re.I)
+    # Moody's also stores the locality INSIDE the street with no comma
+    # ("11853 24 Centreville Mississippi", 2026-09-15). Strip a trailing
+    # "<City> Mississippi|MS" too, or the city renders twice on the card.
+    if city:
+        a = re.sub(r'[\s,]+' + re.escape(city) + r'[\s,]+(?:Mississippi|MS)\s*$', '', a, flags=re.I)
     if city:
         a = re.sub(r'[\s,]+' + re.escape(city) + r'\s*$', '', a, flags=re.I)
     if a.isupper():

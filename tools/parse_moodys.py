@@ -81,7 +81,12 @@ def parse(path):
                 m = re.search(r'\s{3,}([A-Za-z][A-Za-z /&\-]*?:\s*[A-Za-z][A-Za-z /&\-]*?)\s+For\s+(Sale|Lease)\s*$', l.rstrip())
                 if m:
                     sub = m.group(1).strip(); break
-            deal = 'Sale' if hdr.endswith('For Sale') else ('Lease' if hdr.endswith('For Lease') else '')
+            # "Industrial Sublease" (2026-09-15) is a LEASE listing whose header
+            # never says "For Lease" -- it fell through as deal '' and would have
+            # been dropped. Match the tail word, not the exact phrase.
+            deal = ('Sale'  if hdr.endswith('For Sale')
+                    else 'Lease' if (hdr.endswith('For Lease') or hdr.endswith('Sublease'))
+                    else '')
             out[lid] = dict(listingId=lid, header=hdr, deal=deal, marketing=marketing,
                             address=addr, city=city, zip=zp, subtypeLabel=sub, kv=kv,
                             desc=[], contacts=[])

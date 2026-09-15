@@ -14,7 +14,7 @@ LAND_SF below lists the records verified against their own descriptions.
 import json, re, sys, datetime
 
 RAW, DATES, DETAILS, OUT = sys.argv[1:5]
-MEETING = datetime.date(2026, 9, 9)
+MEETING = datetime.date(2026, 9, 16)
 BASE = "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/"
 PHOTO = "https://cdn.photos.sparkplatform.com/"
 
@@ -54,6 +54,9 @@ TYPE_FIX = {
  "4104371": "Commercial",   # "multi use building, gutted and ready for build-out"
  "4152716": "Land",         # commercial parking lot
  "4139275": "Multifamily",  # mobile home park investment
+ "4162227": "Mixed Use",    # "8.2 ACRE MIXED-USE ... with C-2 COMMERCIAL FRONTAGE"
+ "4161935": "Special Purpose",  # church campus, multiple buildings
+ "4162047": "Land",         # 4.18-5.64 AC development tract, Highland Colony corridor
 }
 LAND_SF = {
  "4144121": ("4.8 AC", ""),      # "Estimated 4.8 acres of commercial land" - 209,305 SF is the LOT
@@ -64,6 +67,17 @@ LAND_SF = {
  "4104153": ("2.26 AC", ""),     # "2.26 acre lot zoned C-2"
  "4145662": ("4.5 AC", ""),      # metal building on 4.5 acres; SF field is the lot
  "4160903": ("0.76 AC", "4,000 SF"),  # "all metal building is 4,000 sq ft"
+ # 2026-09-16 week. FlexMLS put the LOT in BuildingAreaTotal on each of these --
+ # the sub-100 values are plainly acres, the zeroes are bare land.
+ "4162118": ("2.86 AC", ""),     # "2.86 acre tract on Old Whitfield Road"
+ "4162130": ("0.53 AC", ""),     # "0.53 acre C-2 commercial lot on Forest Avenue"
+ "4162122": ("0.82 AC", ""),     # "This 0.82 Acre lot is flat, cleared"
+ "4162123": ("0.82 AC", ""),     # "This 0.82 Acre lot is flat, cleared"
+ "4162097": ("1.36 AC", ""),     # "This 1.36 Acre lot is flat, cleared"
+ "4162069": ("0.95 AC", ""),     # "Commercial Lot .95 acres"
+ "4161760": ("2.60 AC", ""),     # "Prime 2.60-Acre Commercial Corner Lot"
+ "4150284": ("", ""),            # "Recently cleared and ready for development"
+ "4162047": ("5.64 AC", ""),     # 245,678 SF is the lot; see the note on this record
 }
 TYPE_HINT = [
  (r'\b(warehouse|industrial|manufactur|distribution)\b', 'Industrial'),
@@ -115,7 +129,13 @@ for section, p in parse_pipe(RAW):
     agent, office, desc = details.get(lid, ('', '', ''))
     d = desc.strip()
     ty = ''
+    # The Land hint matches the bare word "lot", which appears in plenty of
+    # descriptions of BUILDINGS ("on a corner lot", "on a .52 acre lot"). Four
+    # records with real building sizes were typed Land on 2026-09-15 this way.
+    # A record that reports a building size is not land, whatever the prose says.
+    _has_bldg = bool(sf) and float(sf or 0) > 100
     for pat, t in TYPE_HINT:
+        if t == 'Land' and _has_bldg: continue
         if re.search(pat, d, re.I): ty = t; break
     lot, bsf = LAND_SF.get(lid, ('', None))
     if bsf is None:

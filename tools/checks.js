@@ -15,6 +15,11 @@ const bad = [], warn = [];
 // This is a text backstop only -- the real defence is checking PropertyType
 // per record at pull time (MLS 'A' and 'B' are both suspect; see WEEKLY.md).
 const RESI = /\b(single family home|residential lot|build (the|your) home|bedroom home|subdivision lot|sq ft minimum)\b/i;
+// Softer signals. These need a human call rather than a hard block: a 52-acre
+// hunting tract that mentions "potential homesites" is commercial land, while a
+// 0.5-acre lot that says "build your forever home" is not. Five Moody's records
+// slipped past the hard pattern on 2026-09-15 and had to be caught by hand.
+const RESI_SOFT = /\b(homesites?|home sites?|build a (?:new )?home|build your (?:new |forever )?home|manufactured home|residential lots?)\b/i;
 
 for (const a of A) for (const r of m[a] || []) {
   const src = String(r.source || '').split(',').filter(Boolean);
@@ -40,6 +45,9 @@ for (const a of A) for (const r of m[a] || []) {
     bad.push([...where, 'missing photo (source ' + r.source + ')']);
 
   if (RESI.test(r.notes || '')) bad.push([...where, 'notes read residential -- ' + (r.notes || '').slice(0, 60)]);
+  else if (RESI_SOFT.test(r.notes || ''))
+    warn.push([...where, 'possible residential land -- judge it: "' +
+      (r.notes || '').match(RESI_SOFT)[0] + '" in ' + (r.address || '')]);
 
   // Soft signals worth a human glance.
   if (a === 'forSale'  && !r.price && !/not published|not disclosed|withheld|call for pricing|negotiable|auction/i.test(r.notes || ''))

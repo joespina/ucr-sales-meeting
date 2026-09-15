@@ -15,7 +15,7 @@ import json, re, sys, datetime
 
 SALE_IN, OUT = sys.argv[1], sys.argv[2]
 LEASE_IN = sys.argv[3] if len(sys.argv) > 3 else None
-EXPORT_DATE = datetime.date(2026, 9, 8)
+EXPORT_DATE = datetime.date(2026, 9, 15)
 # Sale photos hang off /assets/, lease photos off /lease-assets/; the raw files carry
 # whichever prefix the card had, so only the common part is prepended here.
 IMGBASE = "https://crexi.com/images/format=auto,width=620,height=400,fit=cover/"
@@ -105,6 +105,17 @@ def build(path, keys, kind, start=0):
             if m:
                 rate = m.group(1).replace('$', '')
                 unit = '$/SF/Year' if m.group(2).upper() == 'YR' else '$/SF/Month'
+                # Crexi's published UNIT is wrong often enough to check the magnitude.
+                # 325 Hwy 51 was "$2,300/SF/MO" on 2026-09-08 (Moody's had the same
+                # suite at $2,300 a month); 5910 U.S. 49 was "$1,200/SF/YR" on a
+                # 1,239 SF retail suite on 2026-09-15. Anything at or above $200/SF
+                # is not a per-square-foot rate; say so rather than print it.
+                _lo = re.match(r'([\d,.]+)', rate)
+                if _lo and float(_lo.group(1).replace(',', '')) >= 200:
+                    rate = ('$%s — Crexi publishes this as $/SF/%s, which is not a '
+                            'credible per-square-foot rate; confirm the unit with the '
+                            'listing broker' % (rate, m.group(2).upper()))
+                    unit = ''
             else:
                 rate, unit = price.lstrip('$'), ('Negotiable' if not price.strip('$ ') else '')
             out.append(rec(keys, dict(d, id=f"cxl{i}", askingRate=rate, leaseType=unit)))
