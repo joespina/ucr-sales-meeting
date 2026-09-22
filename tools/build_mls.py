@@ -14,7 +14,10 @@ LAND_SF below lists the records verified against their own descriptions.
 import json, re, sys, datetime
 
 RAW, DATES, DETAILS, OUT = sys.argv[1:5]
-MEETING = datetime.date(2026, 9, 16)
+# The pending note used to hardcode "between Aug 31 and Sep 7" and would have shipped a
+# stale window into every later report -- the same bug build_moodys_comps had. Pass the
+# window as argv[5], e.g. "Sep 14 and Sep 21".
+WINDOW = sys.argv[5] if len(sys.argv) > 5 else 'the report window' 
 BASE = "https://my.flexmls.com/mlsunited/search/idx_links/20210924020458295435000000/listing_detail/"
 PHOTO = "https://cdn.photos.sparkplatform.com/"
 
@@ -57,6 +60,12 @@ TYPE_FIX = {
  "4162227": "Mixed Use",    # "8.2 ACRE MIXED-USE ... with C-2 COMMERCIAL FRONTAGE"
  "4161935": "Special Purpose",  # church campus, multiple buildings
  "4162047": "Land",         # 4.18-5.64 AC development tract, Highland Colony corridor
+ # 2026-09-23 week
+ "4162664": "Multifamily",  # 24-unit apartment complex + 162 RV pads on 9 acres
+ "4162506": "Industrial",   # Country Mini Storage, 112 units on 11.5 acres
+ "4162505": "Hospitality",  # "40 rooms and two apartments", ADR $45-50, 50% occupancy
+ "4162622": "Retail",       # the Star Drive-In restaurant, Brookhaven
+ "4162925": "Special Purpose",  # licensed medical-cannabis cultivation facility
 }
 LAND_SF = {
  "4144121": ("4.8 AC", ""),      # "Estimated 4.8 acres of commercial land" - 209,305 SF is the LOT
@@ -78,7 +87,21 @@ LAND_SF = {
  "4161760": ("2.60 AC", ""),     # "Prime 2.60-Acre Commercial Corner Lot"
  "4150284": ("", ""),            # "Recently cleared and ready for development"
  "4162047": ("5.64 AC", ""),     # 245,678 SF is the lot; see the note on this record
+ # 2026-09-23 week -- each checked against its own description.
+ "4163123": ("0.22 AC", ""),     # "this lot ... Commercial Land"; 9,798 SF is the lot
+ "4159534": ("2.60 AC", ""),     # "1.8 AC of hard land and 0.8 AC of bottom land" = 2.6 AC
+ "4152709": ("1.00 AC", ""),     # "almost 1 acre of land and SHOP"; 43,560 SF is exactly 1 AC
+ "4139275": ("5.10 AC", ""),     # "mobile home park ... on 5.1 acres"; MLS reports 0 SF
 }
+# ListingId -> why it was dropped. PropertyType E/F is a commercial CODE, not a
+# commercial PROPERTY: agents do file houses under it. The description is the only
+# reliable screen, so every record's description is read and the residential ones are
+# named here rather than filtered by a keyword (a "3-bedroom" warehouse-with-flat is
+# still commercial). Standing rule: no residential in any array, from any source.
+DROP = {
+ "4162643": "MLS description is 'This 3-bedroom, 2-bath home in Canton, MS' - a house",
+}
+
 TYPE_HINT = [
  (r'\b(warehouse|industrial|manufactur|distribution)\b', 'Industrial'),
  (r'\b(office)\b', 'Office'),
@@ -126,6 +149,8 @@ for section, p in parse_pipe(RAW):
         skipped.append((lid, addr, city, st, 'not Mississippi')); continue
     if ptype not in ('E', 'F'):
         skipped.append((lid, addr, city, st, 'PropertyType ' + ptype)); continue
+    if lid in DROP:
+        skipped.append((lid, addr, city, st, 'residential: ' + DROP[lid])); continue
     agent, office, desc = details.get(lid, ('', '', ''))
     d = desc.strip()
     ty = ''
@@ -203,7 +228,7 @@ for section, p in parse_pipe(RAW):
                 listDate=('' if pending else listDate),
                 domLabel=('Under Contract' if pending else ('' if listDate else 'N/A')))
     if pending:
-        notes.append('Under contract - went pending between Aug 31 and Sep 7; not available')
+        notes.append('Under contract - went pending between %s; not available' % WINDOW)
     if ptype == 'E':
         si += 1
         forSale.append(rec(FS_KEYS, dict(base, id=f"ms{si}",
@@ -217,14 +242,28 @@ for section, p in parse_pipe(RAW):
         # not a credible monthly rent and reads as $25/SF/yr. Rather than pick a unit we
         # cannot confirm, say so on the card: never state a rate we have not verified.
         # A non-numeric askingRate is passed through verbatim by rateText() in index.html.
-        amb = bool(price) and float(price) < 100
-        if amb:
+        # A lease record's price field is not always a rent. 4162925 (305 C Williamson
+        # Rd, a cannabis facility) was filed under PropertyType F with 375000 in it, and
+        # its own description reads "offered at $375,000" -- a SALE price on a lease
+        # record. Printed as published it would have read as $375,000 a month. So the
+        # field is treated as unit-ambiguous at BOTH ends: too small to be a monthly
+        # total, or too large to be one.
+        lo = bool(price) and float(price) < 100
+        hi = bool(price) and float(price) >= 50000
+        if lo:
             rate = f"{float(price):g} — unit not stated by MLS"
             ltype = ''
             rnote = (f'MLS United published this rate as "{float(price):g}" with no unit attached. '
                      'That is too low to be a monthly total for a space this size, so it most '
                      f'likely means ${float(price):g}/SF/year — confirm with the listing agent '
                      'before quoting it.')
+        elif hi:
+            rate = f"${int(float(price)):,} — see note, not a monthly rent"
+            ltype = ''
+            rnote = (f'MLS United filed this as a lease listing with ${int(float(price)):,} in the '
+                     'price field. That is not a credible monthly rent for this space; the '
+                     'listing text reads as an asking SALE price. Shown as published, unit '
+                     'unresolved - confirm with the listing agent before quoting it.')
         else:
             rate = f"{int(float(price)):,}" if price else ''
             ltype = 'monthly rate'

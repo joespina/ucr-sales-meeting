@@ -24,7 +24,8 @@ without it.
 """
 import datetime
 
-EXPORT_DATE = datetime.date(2026, 9, 15)
+EXPORT_DATE = datetime.date(2026, 9, 22)   # fallback only; parse_costar reads the real
+                                           # one off the PDF footer into entry['exportDate']
 import json, re, sys
 
 if len(sys.argv) < 4:
@@ -202,6 +203,17 @@ def notes_for(b, kv, extra=None):
 
 # ---------- FOR SALE ----------
 sale=json.load(open(SALE_IN))
+
+# The export date comes from the PDF footer via parse_costar; the constant above is only
+# a fallback for old build files. Getting this wrong shifts EVERY listDate, so it is
+# printed and it is fatal when the two exports disagree.
+_eds = sorted({e.get('exportDate') for e in sale if e.get('exportDate')} |
+              {e.get('exportDate') for e in json.load(open(LEASE_IN)) if e.get('exportDate')})
+if len(_eds) > 1:
+    sys.exit('CoStar exports carry different footer dates: %s -- re-export both on one day' % _eds)
+if _eds:
+    EXPORT_DATE = datetime.date.fromisoformat(_eds[0])
+print('CoStar export date:', EXPORT_DATE.isoformat(), '(from PDF footer)' if _eds else '(FALLBACK CONSTANT)')
 groups={}
 for b in sale:
     addr,mk = split_title(b['title'])

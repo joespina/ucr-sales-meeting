@@ -58,6 +58,19 @@ ALIASES = {
     # matching price AND size, not by address resemblance alone.
     ("906 6th avenue", "picayune"): ("906 sixth ave", "picayune"),          # MLS -> CoStar/Crexi, both $575,000
     ("4194 hwy 589", "sumrall"): ("4194 ms589", "sumrall"),                 # Crexi -> CoStar, both 25.5 AC unpriced
+    # 2026-09-23: same property, different spelling across sources. Each verified by
+    # matching price AND size (or the tenant), not by address resemblance alone.
+    ("220 bass pro drive", "pearl"): ("220 bass pro dr", "pearl"),          # Crexi -> CoStar, both $2,965,000 Dutch Bros
+    ("21282148 jackson avenue w", "oxford"): ("21282150 jackson ave w", "oxford"),  # both $14,500,000 Oakwood Plaza
+    ("106 us 61", "natchez"): ("106 highway 61 s", "natchez"),              # both $1,377,778 Pizza Hut
+    ("140 legacy dr", "pearl"): ("140 legacy park", "pearl"),               # Crexi -> Moody's, Legacy Park warehouse
+    ("390 courthouse road", "gulfport"): ("390 courthouse rd", "gulfport"), # MLS -> CoStar, both $599,000 medical office
+    ("3010 lakeland cove", "flowood"): ("3010 lakeland cv", "flowood"),     # Moody's -> CoStar, both 75,531 SF office
+    ("98110 e main street", "senatobia"): ("98110 e main st", "senatobia"),
+    ("1278 highway 98 east", "columbia"): ("1278 highway 98 e", "columbia"),
+    ("2011 w pine street", "hattiesburg"): ("2011 w pine st", "hattiesburg"),
+    ("4547 north state street", "jackson"): ("45414547 n state st", "jackson"),   # Triangle Mart sits in the 4541-4547 strip
+    ("4225 lakeland drive", "flowood"): ("42054243 lakeland dr", "flowood"),      # both 31,594 SF single-tenant retail
     ("0 tchulahoma rd", "hernando"): ("tchulahoma rd", "hernando"),         # Crexi -> CoStar, both 58 AC unpriced
     ("country club rd", "hattiesburg"): ("0 country club road", "hattiesburg"),  # Moody's -> Crexi, both $79,990
     ("111 mable st", "hattiesburg"): ("111 mable street", "hattiesburg"),   # Crexi -> Moody's, both $189,900
@@ -176,7 +189,18 @@ def merge(out_path, sources):
                     for k, label in (("price", "asking price"), ("askingRate", "asking rate"),
                                      ("salePrice", "sale price")):
                         a_val, b_val = str(tgt.get(k) or "").strip(), str(r.get(k) or "").strip()
-                        if a_val and b_val and a_val != b_val and not _same_rate(tgt, r, k):
+                        # The raw strings being EQUAL does not mean the sources agree:
+                        # 510 George St, Jackson is "14" on both Moody's and Crexi, but
+                        # Moody's files it as $/SF/MONTH and Crexi as $/SF/YEAR -- a
+                        # twelve-fold difference that the string test called a match and
+                        # passed through silently (found 2026-09-22). For a lease rate the
+                        # comparison is the unit-aware one; only for a price is an equal
+                        # string actually agreement.
+                        if k == "askingRate":
+                            differs = not _same_rate(tgt, r, k)
+                        else:
+                            differs = a_val != b_val
+                        if a_val and b_val and differs:
                             conflicts.append((a, tgt["id"], tgt.get("address"), label, a_val, b_val))
                             unit = lambda x: (" " + str(x.get("leaseType")).strip()
                                               if k == "askingRate" and x.get("leaseType") else "")
@@ -186,6 +210,18 @@ def merge(out_path, sources):
                                       b_val, unit(r), r.get("source", "?")))
                             if msg not in tgt.get("notes", ""):
                                 tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + msg
+                    # When one source's rate is a self-describing string (because its
+                    # own unit was not credible) and the other publishes a plain number,
+                    # the second source is corroboration and belongs on the card: 510
+                    # George St reads "$14 - Moody's publishes this as $/SF/month ..." and
+                    # Crexi lists the same space at 14 $/SF/Year, which is what settles it.
+                    ta, ra = str(tgt.get("askingRate") or ""), str(r.get("askingRate") or "")
+                    plain = lambda v: bool(re.fullmatch(r"[\d.,]+(?:\s*-\s*[\d.,]+)?", v.strip()))
+                    if ta and ra and not plain(ta) and plain(ra):
+                        u = (" " + str(r.get("leaseType")).strip()) if r.get("leaseType") else ""
+                        m2 = ("%s publishes this space at %s%s" % (r.get("source", "?"), ra, u))
+                        if m2 not in tgt.get("notes", ""):
+                            tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m2
                     for k, v in r.items():
                         if k in ("id", "source", "notes"): continue
                         if not tgt.get(k) and v: tgt[k] = v

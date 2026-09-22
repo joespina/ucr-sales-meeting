@@ -59,6 +59,12 @@ parser strips leading form feeds now. If the entry count ever has gaps, suspect 
 
 A **missing** Sale/Lease Comps PDF means zero matching transactions that week. Do not chase her for it.
 
+**Check what each PDF actually contains, not what it is called.** On 2026-09-22 both files named
+"Sale and Lease Comps Report" were re-runs of the For Sale and Lease search — available listings,
+no transactions in them at all — and the four Moody's sale comps had to come from the live pull.
+`grep -c "Listing ID"` and a look at the Date Listed spread tells you in one command; two exports
+with the same listing ids are the same search twice.
+
 Comps are hand-entered into `build/cs_comps.json`:
 
 ```json

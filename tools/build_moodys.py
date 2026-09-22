@@ -63,6 +63,16 @@ def acres(v):
     m = re.match(r'([\d.,]+)\s*Acres?', v or '')
     return m.group(1) + ' AC' if m else ''
 
+def lot_of(kv):
+    """Acreage, from whichever field this listing template used.
+
+    Moody's only fills "Land Size" on about a quarter of its records (16 of 64 on
+    2026-09-22). On a LAND listing the acreage is published as the *available space*
+    instead -- "Total Available Space  7.7 Acres" -- so reading "Land Size" alone left
+    40 land cards with no acreage at all, which is the one number a land listing is
+    priced off."""
+    return acres(kv.get('Land Size', '')) or acres(kv.get('Total Available Space', ''))
+
 # --- the property-id / photo map -------------------------------------------------
 pid, photo, mapaddr = {}, {}, {}
 for line in open(MAP_IN):
@@ -130,8 +140,27 @@ def contact_of(r):
                 office = p.strip()[7:].strip()
     return name, office
 
+# Listing ID -> why this record is residential and is not in the report. Moody's
+# publishes plenty of residential land on a commercial feed, and its structured fields
+# do not say so -- the only reliable screen is the description, read by hand. Standing
+# rule: no residential in any array, from any source. Rural recreational land of scale
+# stays (the Pass Christian precedent): a 25-acre hunting tract that mentions homesite
+# potential in passing is CRE, a 2-acre lot whose whole pitch is "build your new home"
+# is not.
+DROP = {
+ "45639991": "Anderson Rd, Wesson - '4 acres ... ready for someone to call it home', Wesson School District",
+ "45639942": "Hwy 84 E, Roxie - '1 acre lot ... a camper, mobile home, or small homesite'",
+ "45620995": "1140 Irene Rd, Summit - '20 acres ... a beautiful old home site with a house, guest house'",
+ "45617534": "Fairway Cv, McComb - '11 residential lots ... the perfect location for a new home'",
+ "45617519": "Fairway Drive, McComb - 'a residential lot for sale in Fairway Estates ... build your new home'",
+ "45617494": "1015 Shady Lane Dr, McComb - '2.2-acre ... build a new home, place a manufactured home'",
+}
+
 groups = {}
+dropped = []
 for r in rows:
+    if r['listingId'] in DROP:
+        dropped.append((r['listingId'], DROP[r['listingId']])); continue
     addr = best_addr(clean_addr(r['address'], r['city'], r['zip']), [r['listingId']]) or r['marketing']
     key = (r['deal'] or 'Lease', norm(addr), norm(r['city']))
     groups.setdefault(key, []).append(r)
@@ -192,7 +221,7 @@ for (deal, _a, _c), g in groups.items():
     common = dict(address=addr, city=r0['city'], state='MS', zip=r0['zip'],
                   county=(kv.get('County', '') + ' County') if kv.get('County') else '',
                   type=ptype, isLand=is_land, marketingName=(r0['marketing'] if r0['address'] else ''),
-                  size=sf(kv.get('Building Size', '')), lotSize=acres(kv.get('Land Size', '')),
+                  size=sf(kv.get('Building Size', '')), lotSize=lot_of(kv),
                   yearBuilt=(kv.get('Year Built') or kv.get('Year Built/Renovated') or '').split('/')[0],
                   zoning=kv.get('Zoning', ''), contact=contact, office=office,
                   listDate=listDate, domLabel=('' if listDate else 'N/A'), source='moodys',
@@ -216,11 +245,52 @@ for (deal, _a, _c), g in groups.items():
         rate, ltype = '', ''
         ann = [re.match(r'\$([\d.,]+)\s*Annual/SF', x) for x in rates]
         ann = [m.group(1) for m in ann if m]
-        mon = [re.match(r'\$([\d,]+)\s*Monthly', x) for x in rates]
+        # Moody's writes monthly rates with cents ("$675.00 Monthly"). [\d,]+ stopped at
+        # the decimal point and the whole rate was dropped, so three suites at
+        # 4906 Old Hwy 11 shipped with no rate at all (found 2026-09-22).
+        mon = [re.match(r'\$([\d.,]+?)(?:\.00)?\s*Monthly(?!/SF)', x) for x in rates]
         mon = [m.group(1) for m in mon if m]
-        if ann:
+        # Moody's has a THIRD unit, "Monthly/SF", and it is not a monthly total: 510
+        # George St, Jackson published "$14.00 Monthly/SF" on 10,000 SF, which the
+        # plain Monthly branch read as $14 a month for the whole building. Crexi lists
+        # the same space at $14.00/SF/YEAR, so Moody's unit is the one that is wrong --
+        # but a card should say that rather than silently pick a side.
+        mos = [re.match(r'\$([\d.,]+?)(?:\.00)?\s*Monthly/SF', x) for x in rates]
+        mos = [m.group(1) for m in mos if m]
+        # Moody's contradicts ITSELF when one property carries two listings for the same
+        # space: 1110 Hardy St, Hattiesburg published the identical 3,232 SF car-detail
+        # shop as "$1,500 Annual/SF" on one listing and "$1,500 Monthly" on the other
+        # (2026-09-22). Annual/SF won the elif below, so the card asked $1,500/SF/year --
+        # $4.8m a year on a car wash. Two screens now, both of which say what Moody's
+        # published rather than picking a unit we cannot confirm:
+        #   * the same figure filed under both units is stated as the disagreement it is;
+        #   * an Annual/SF rate at or above $200/SF is not a per-square-foot rate at all
+        #     (the same rule build_crexi applies to its own $1,200/SF listings).
+        if ann and mon and set(ann) == set(mon):
+            rate = ('$%s — Moody\'s publishes this same figure as BOTH $/SF/year and a '
+                    'monthly total on two listings for this space; the monthly reading is '
+                    'the credible one, confirm with the listing broker' % ann[0])
+            ltype = ''
+        elif ann and max(float(v.replace(',', '')) for v in ann) >= 200:
+            rate = ('$%s — Moody\'s publishes this as $/SF/year, which is not a credible '
+                    'per-square-foot rate; confirm the unit with the listing broker' % ann[0])
+            ltype = ''
+        elif ann:
             rate = ann[0] if len(set(ann)) == 1 else f"{min(ann, key=lambda v: float(v.replace(',','')))} - {max(ann, key=lambda v: float(v.replace(',','')))}"
             ltype = '$/SF/Year'
+        elif mos:
+            # $14.00 Monthly/SF on 510 George St is $168/SF/year for a 1973 Jackson
+            # office block; Crexi lists the same space at $14.00/SF/YEAR. Above $5/SF a
+            # month ($60/SF a year) the unit label is the thing that is wrong, so say so
+            # instead of printing a rate an order of magnitude out.
+            if float(mos[0].replace(',', '')) >= 5:
+                rate = ('$%s — Moody\'s publishes this as $/SF/month, which is '
+                        '$%s/SF/year and not a credible rate; it most likely means '
+                        '$%s/SF/year. Confirm the unit with the listing broker'
+                        % (mos[0], round(float(mos[0].replace(',', '')) * 12, 2), mos[0]))
+                ltype = ''
+            else:
+                rate, ltype = mos[0], '$/SF/Month'
         elif mon:
             rate = mon[0] if len(set(mon)) == 1 else f"{min(mon, key=lambda v: float(v.replace(',','')))} - {max(mon, key=lambda v: float(v.replace(',','')))}"
             ltype = 'monthly rate'
@@ -248,3 +318,7 @@ print('with photo:', sum(1 for r in forSale + forLease if r['photoUrl']), '/', l
 print('with moodysUrl:', sum(1 for r in forSale + forLease if r['moodysUrl']))
 print('with price/rate:', sum(1 for r in forSale if r['price']), '/', len(forSale), '|',
       sum(1 for r in forLease if r['askingRate']), '/', len(forLease))
+
+if dropped:
+    print('dropped as residential:', len(dropped))
+    for lid, why in dropped: print('  ', lid, why)

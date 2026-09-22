@@ -333,3 +333,40 @@ copy them so every source emits the same shape. Notes on the ones that bite:
   this wrong shows a monthly rent as `$/SF/yr`.
 - `size` = building SF, `lotSize` = acreage. Never combine them.
 - `isLand` — true for land; the "Land" badge is suppressed when `type` already says Land.
+
+### 2026-09-22: the sale results page renders 30 cards, and paging drops the date range
+
+The result header LAGS and can sit on a stale figure for tens of seconds (228 and 1,561 were
+both seen while the real answer was 77) — but the filter PANEL is honest: re-open it and read
+the "Show N properties" button, which is the count the applied filter will return.
+
+The page renders **30 property cards at a time** whatever "Results per page: 60" says, and each
+rendered card contributes **two** `a[href*="/properties/"]` links (an absolute
+`/properties/{id}/{City-ST-ZIP}` and a relative `/properties/{id}/mississippi-{slug}`), so
+**dedupe on the numeric id, not the href** — 60 links is 30 properties, not 60.
+
+Clicking page 2 **drops the Custom date range**. What works: click page 2, then re-open the
+filter panel and click Apply again — the panel still holds the range and the second apply
+returns page 2 of the filtered set. Scrolling does not help; the missing cards are pagination,
+not skeletons.
+
+A hand-built `/search?...` URL loses the location filter and returns 0 results, so the location
+must be re-set through the autocomplete every time; the same is true after any navigation.
+
+**Read the cards in one pass and dump them before navigating anywhere.** The filter state is
+not reproducible on demand, and a half-transferred pull means redoing the whole thing.
+
+### Getting a big pull out of the page
+
+`javascript_tool` truncates around 800 characters, but `get_page_text` does not. Replace the
+body with a `<pre>` holding the pipe-delimited lines and read it with `get_page_text`: 12,000
+characters comes back in one call. This works on any page and is the cheapest way to move a
+pull into the container. `window.__*` variables survive the body replacement; they do not
+survive a navigation.
+
+### The iframe probe budget
+
+Each `javascript_tool` call must finish inside ~45 s of CDP time. Four property iframes in
+parallel is about the limit; a batch that times out loses everything the call did, including
+function definitions. Store results in a `window` object and drive batches from a separate
+call, so a timeout costs one batch rather than the run.

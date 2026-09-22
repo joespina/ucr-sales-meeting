@@ -110,9 +110,24 @@ def amenities(body):
     a = m.group(1).strip()
     return '' if a.lower().startswith('no data') else a
 
+FOOTER_DATE = re.compile(r'Licensed to NAI UCR Properties[^\n]*?(\d{1,2}/\d{1,2}/\d{4})')
+
+def export_date(path):
+    """The date CoStar stamped on the PDF footer, ISO. 'On Market: 5 Days' is
+    meaningless without it, and hand-editing a constant in build_costar.py every week
+    is exactly the kind of step that gets forgotten -- so read it from the export."""
+    hits = FOOTER_DATE.findall(open(path).read())
+    if not hits: return ''
+    best = max(set(hits), key=hits.count)
+    m, d, y = (int(x) for x in best.split('/'))
+    return '%04d-%02d-%02d' % (y, m, d)
+
 if __name__ == '__main__':
     path = sys.argv[1]
     bs = blocks(path)
+    ed = export_date(path)
+    print('export date (PDF footer):', ed or 'NOT FOUND')
+    for b in bs: b['exportDate'] = ed
     print('entries:', len(bs), '->', [b['num'] for b in bs])
     for b in bs:
         b['kv'] = kvpairs(b['body']); b['spaces'] = spaces(b['body']); b['amen'] = amenities(b['body']); b['owner'] = owner(b['body'])
