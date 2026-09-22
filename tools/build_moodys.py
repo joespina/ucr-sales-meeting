@@ -31,6 +31,21 @@ FL_KEYS = ["id","address","city","state","zip","county","type","isLand","marketi
 
 def rec(keys, d): return {k: d.get(k, False if k == "isLand" else "") for k in keys}
 def norm(x): return re.sub(r'\s+',' ',re.sub(r'[^a-z0-9 ]','',str(x or '').lower())).strip()
+
+def demojibake(v):
+    """Moody's PDF text carries UTF-8 read as latin-1 in places, so "82± Acre Hunting
+    Property" reaches the card as "82Â± Acre Hunting Property" -- in the marketing NAME,
+    not just the notes (2026-09-22). Re-decode the handful of sequences that actually
+    occur rather than round-tripping the whole string, which would mangle anything that
+    is legitimately latin-1."""
+    if not isinstance(v, str) or 'Â' not in v and 'â€' not in v and 'Ã' not in v:
+        return v
+    try:
+        return v.encode('latin-1').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return (v.replace('Â±', '±').replace('â€™', '\u2019')
+                 .replace('â€œ', '\u201c').replace('â€\x9d', '\u201d')
+                 .replace('â€“', '\u2013').replace('â€”', '\u2014'))
 def mapurl(a,c): return "https://www.google.com/maps/search/?q=" + '+'.join(re.sub(r'[^A-Za-z0-9 ]',' ',(a+' '+c+' MS')).split())
 
 def clean_addr(a, city, zp):
@@ -93,8 +108,35 @@ for line in open(MAP_IN):
 # it is already in the map file -- prefer it when the PDF line does not look like one.
 STREETISH = re.compile(r"^(?:\d|[NSEW]\s|Highway|Hwy|Old\s|County\s|Co\s+Rd|Lot\s|Route|US[-\s]|MS[-\s])", re.I)
 
+ROUTE_WORD = re.compile(r'\b(Highway|Hwy|US|MS|Interstate|I)[- ]?(\d+)\b', re.I)
+
+def route_addr(addr, desc):
+    """Moody's stores a highway address as "11853 24 Centreville Mississippi"; stripping
+    the locality leaves "11853 24", which is not an address and sends the map link to
+    nowhere. The listing's OWN description names the route ("Located in Wilkinson County
+    on Highway 24 in Centreville"), so when the bare trailing number matches a route
+    number in the description, restore the word the description uses. This was corrected
+    by hand in the 2026-09-16 block and regressed the next week because nothing
+    implemented it."""
+    m = re.match(r'^(\d+)\s+(\d+)$', (addr or '').strip())
+    if not m or not desc:
+        return addr
+    for word_m in ROUTE_WORD.finditer(desc):
+        if word_m.group(2) == m.group(2):
+            return '%s %s %s' % (m.group(1), word_m.group(1), m.group(2))
+    return addr
+
 def best_addr(pdf_addr, lids):
     if pdf_addr and STREETISH.match(pdf_addr.strip()):
+        # A listing can publish the road without the house number while Moody's own
+        # property record has it -- "MS 35 N" vs "4006 MS-35", Forest (2026-09-22).
+        # A card with no street number sends the map link to the road rather than the
+        # parcel, so prefer the numbered form when the same property record supplies one.
+        if not re.match(r'^\d', pdf_addr.strip()):
+            for l in lids:
+                m = mapaddr.get(l, '')
+                if m and re.match(r'^\d', m.strip()) and STREETISH.match(m):
+                    return m
         return pdf_addr
     for l in lids:
         m = mapaddr.get(l, '')
@@ -103,6 +145,13 @@ def best_addr(pdf_addr, lids):
     return pdf_addr
 
 rows = json.load(open(PDF_IN))
+
+def _fix_strings(o):
+    if isinstance(o, str): return demojibake(o)
+    if isinstance(o, list): return [_fix_strings(x) for x in o]
+    if isinstance(o, dict): return {k: _fix_strings(v) for k, v in o.items()}
+    return o
+rows = _fix_strings(rows)
 
 TYPE = {'Office':'Office','Retail':'Retail','Industrial':'Industrial','Land':'Land',
         'Multifamily':'Multifamily','Multi-Family':'Multifamily','Multi Family':'Multifamily',
@@ -162,6 +211,7 @@ for r in rows:
     if r['listingId'] in DROP:
         dropped.append((r['listingId'], DROP[r['listingId']])); continue
     addr = best_addr(clean_addr(r['address'], r['city'], r['zip']), [r['listingId']]) or r['marketing']
+    addr = route_addr(addr, r.get('desc') or '')
     key = (r['deal'] or 'Lease', norm(addr), norm(r['city']))
     groups.setdefault(key, []).append(r)
 
@@ -172,6 +222,7 @@ for (deal, _a, _c), g in groups.items():
     kv = r0['kv']
     lids = [x['listingId'] for x in g]
     addr = best_addr(clean_addr(r0['address'], r0['city'], r0['zip']), lids) or r0['marketing']
+    addr = route_addr(addr, r0.get('desc') or '')
     ident = next((pid[l] for l in lids if l in pid), '')
     img = next((photo[l] for l in lids if photo.get(l)), '')
     ptype = TYPE.get(kv.get('Property Type', ''), kv.get('Property Type', ''))

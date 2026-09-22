@@ -62,8 +62,14 @@ def parse(path):
                     else:
                         addr = ''; city = m2.group(1).strip(); zp = m2.group(3)
                     # marketing name is the first non-empty line above the "Prepared on" line
+                    # "Prepared on September 22, 2026" WRAPS, and the continuation line is
+                    # just "22, 2026" -- which passes a substring guard on "Prepared on" and
+                    # became the marketing name on two cards (2026-09-22). Reject anything
+                    # that is a date fragment or carries no word of its own.
+                    JUNK = re.compile(r'^(?:\d{1,2},\s*\d{4}|\d{4}|[\d,\s.-]+)$')
                     for j in range(i-1, -1, -1):
                         s = lines[j].strip()
+                        if JUNK.match(s): continue
                         if s and 'Prepared on' not in s and 'NAI UCR' not in s and s != hdr:
                             marketing = re.split(r'\s{2,}', s)[0].strip()
                             # the right-hand "Office: General For Lease" column can sit a

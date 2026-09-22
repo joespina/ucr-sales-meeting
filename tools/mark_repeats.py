@@ -32,11 +32,25 @@ if not prev:
 
 data = json.load(open(RECORDS, encoding="utf-8"))
 NOTE = "Also appeared in the %s report" % PREV_LABEL
+# Matching on the address alone loses a repeat the moment an address is CORRECTED:
+# "MS 35 N, Forest" became "4006 MS-35, Forest" once Moody's own property record supplied
+# the house number, and the listing stopped counting as a repeat although it is the same
+# listing (2026-09-22). A source URL or MLS# is the identity that survives that, so match
+# on either.
+def keys_of(r):
+    ks = {("addr", norm(r.get("address")), norm(r.get("city")))}
+    for f in ("moodysUrl", "crexiUrl", "mlsUrl"):
+        v = str(r.get(f) or "").strip()
+        if v: ks.add((f, v))
+    if r.get("mlsNum"): ks.add(("mlsNum", str(r["mlsNum"]).strip()))
+    return ks
+
 marked = []
 for a in ARRAYS:
-    seen = {(norm(r.get("address")), norm(r.get("city"))) for r in prev.get(a, [])}
+    seen = set()
+    for r in prev.get(a, []): seen |= keys_of(r)
     for r in data.get(a, []):
-        if (norm(r.get("address")), norm(r.get("city"))) in seen:
+        if keys_of(r) & seen:
             if NOTE not in (r.get("notes") or ""):
                 r["notes"] = (r["notes"] + " · " if r.get("notes") else "") + NOTE
             marked.append((a, r["id"], r["address"], r["city"]))

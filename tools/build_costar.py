@@ -214,9 +214,20 @@ if len(_eds) > 1:
 if _eds:
     EXPORT_DATE = datetime.date.fromisoformat(_eds[0])
 print('CoStar export date:', EXPORT_DATE.isoformat(), '(from PDF footer)' if _eds else '(FALLBACK CONSTANT)')
+# CoStar truncates a long street name with an ellipsis in its own export -- in the
+# title, the location line and the running header alike, so there is no copy of the full
+# name anywhere in the PDF. Only completions VERIFIED against an outside source belong
+# here, with that source named; never guess the rest of a street.
+ADDR_FIX = {
+ '13900 Wilfred Seymour\u2026': ('13900 Wilfred Seymour Rd',
+   'CoStar truncates this street name in its own export ("13900 Wilfred Seymour\u2026"); '
+   'completed from the hotel\'s published address'),
+}
+
 groups={}
 for b in sale:
     addr,mk = split_title(b['title'])
+    if addr in ADDR_FIX: addr = ADDR_FIX[addr][0]
     groups.setdefault((norm(addr),norm(b['city'])),[]).append((b,addr,mk))
 
 def merge_kv(g):
@@ -275,9 +286,19 @@ for key,g in groups.items():
     if len(g)>1:
         bsizes=[size_of(clean(x[0]['kv'])) for x in g]
         extra.append('%d buildings in this listing (%s)' % (len(g), ', '.join(s for s in bsizes if s)))
+        # Name the grouped entries. 901 1st Ave E, Meridian is a DUAL-BRAND hotel --
+        # CoStar files MainStay Suites (69 rooms, the priced listing) and Sleep Inn &
+        # Suites (38 rooms, property template, no price) as separate entries at the same
+        # address and parcel. Collapsing them to one card is right, but the card said
+        # only "2 buildings" and the second brand vanished without trace (2026-09-22).
+        _mks = [x[2] for x in g if x[2]]
+        if len(set(_mks)) > 1:
+            extra.append('CoStar lists this address as %d entries: %s' % (len(_mks), ', '.join(_mks)))
         parcels=sorted({clean(x[0]['kv']).get('Parcel','') for x in g} - {''})
         if parcels: extra.append('Parcel%s %s' % ('' if len(parcels)==1 else 's', ', '.join(parcels)))
     if kv.get('Portfolio'): extra.append('CoStar: '+kv['Portfolio'])
+    if addr in {v[0] for v in ADDR_FIX.values()}:
+        extra.append(next(v[1] for v in ADDR_FIX.values() if v[0] == addr))
     av = kv.get('Available') or kv.get('Commercial Available')
     ar = kv.get('Asking Rent') or kv.get('Commercial Asking Rent')
     alsoLease=''

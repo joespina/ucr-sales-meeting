@@ -42,6 +42,25 @@ COUNTY = {"Natchez":"Adams","Hattiesburg":"Forrest","Jackson":"Hinds","Myrtle":"
 TYPES = ["Retail","Office","Industrial","Land","Multifamily","Mixed Use","Hospitality","Flex","Special Purpose",
          "Self Storage","Mobile Home Park","Senior Living"]
 
+# assetId -> (type, sub type, building SF, lease type). Crexi's RESULT CARD often carries
+# no property type at all -- 11 of 44 on 2026-09-22 came through untyped, because the card
+# text is just the address. The property PAGE always has it, under "Property Type" (sale)
+# or "Building Details / Property Type" (lease). Read it there and record it here rather
+# than inferring a type from a marketing name.
+PAGE_FIX = {
+ "2681064": ("Retail", "QSR/Fast Food", "", ""),
+ "2681055": ("Industrial", "Warehouse", "", ""),
+ "2681068": ("Office", "Medical Office, Traditional Office", "", ""),
+ "2681075": ("Land", "", "", ""),
+ "2681066": ("Office", "Traditional Office", "5,032", ""),
+ "2711678": ("Office", "Special Purpose", "", ""),
+ "1155782": ("Office", "Traditional Office, Executive Office", "1,120", "Full Service"),
+ "1245660": ("Office", "Traditional Office, Medical Office", "9,326", "NNN"),
+ "1245662": ("Industrial", "Warehouse", "5,455", "NNN"),
+ "1245670": ("Industrial", "Warehouse", "4,800", "NNN"),
+ "1245676": ("Retail", "", "100,861", "NNN"),
+}
+
 def classify(spec):
     s = spec.lower()
     for t in TYPES:
@@ -65,6 +84,8 @@ def build(path, keys, kind, start=0):
         if dom.strip().isdigit():
             ld = (EXPORT_DATE - datetime.timedelta(days=int(dom))).isoformat()
         ty = classify(spec)
+        fix = PAGE_FIX.get(aid)
+        if fix and fix[0]: ty = fix[0]
         m = re.search(r'([\d,]+)\s*(?:SqFt|SF)\b', spec)
         size = (m.group(1) + ' SF') if m else ''
         m = re.search(r'([\d.]+)\s*(?:acres|AC)\b', spec, re.I)
@@ -84,7 +105,10 @@ def build(path, keys, kind, start=0):
         cap = m.group(1) if m else ''
         m = re.search(r'(\d+)\s*Units?\b', spec, re.I)
         units = m.group(1) if m else ''
+        if fix:
+            if fix[2] and not size: size = fix[2] + ' SF'
         notes = [spec]
+        if fix and fix[1]: notes.append('Crexi sub type: ' + fix[1])
         if not photo:
             # Crexi serves a generic map graphic when a listing has no photo of its own;
             # that placeholder is dropped at capture time, so a blank here is a real gap.
@@ -128,6 +152,10 @@ def build(path, keys, kind, start=0):
                     unit = ''
             else:
                 rate, unit = price.lstrip('$'), ('Negotiable' if not price.strip('$ ') else '')
+            if fix and fix[3] and not unit:
+                unit = fix[3]
+            elif fix and fix[3] and unit and fix[3] not in d['notes']:
+                d['notes'] = d['notes'] + ' · Lease type: ' + fix[3]
             out.append(rec(keys, dict(d, id=f"cxl{i}", askingRate=rate, leaseType=unit)))
     return out
 
