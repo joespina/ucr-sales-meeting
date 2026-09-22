@@ -287,7 +287,7 @@ for (deal, _a, _c), g in groups.items():
                 rate = ('$%s — Moody\'s publishes this as $/SF/month, which is '
                         '$%s/SF/year and not a credible rate; it most likely means '
                         '$%s/SF/year. Confirm the unit with the listing broker'
-                        % (mos[0], round(float(mos[0].replace(',', '')) * 12, 2), mos[0]))
+                        % (mos[0], ('%g' % (float(mos[0].replace(',', '')) * 12)), mos[0]))
                 ltype = ''
             else:
                 rate, ltype = mos[0], '$/SF/Month'
