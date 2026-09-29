@@ -13,7 +13,7 @@ Dedup is by normalised (address, city) within each array. Two records for the
 same property must never both appear: the dashboard shows one card per row and
 duplicates read as double-counted inventory.
 """
-import json, re, sys, os
+import datetime, json, re, sys, os
 
 ARRAYS = ("forSale", "forLease", "saleComps", "leaseComps")
 
@@ -250,6 +250,34 @@ def merge(out_path, sources):
                         if m3 not in tgt.get("notes", ""):
                             tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m3
                         conflicts.append((a, tgt["id"], tgt.get("address"), "size", str(tgt.get("size")), str(r.get("size"))))
+                    # LOT size likewise (for-sale only; every source reports it in acres). 1679 Old
+                    # Fannin Rd is 0.73 AC on CoStar and 0.62 AC on Crexi; 103 Old Highway 61 is
+                    # 5.00 AC on CoStar and 2.84 AC on Crexi (2026-09-29). Rounding (0.22 vs 0.25)
+                    # is not a disagreement, hence the 0.05 AC floor.
+                    la, lb = _num(tgt.get("lotSize")), _num(r.get("lotSize"))
+                    if (a == "forSale" and la and lb and abs(la - lb) / max(la, lb) > 0.10
+                            and abs(la - lb) >= 0.05):
+                        m5 = ("Sources disagree on the lot: %s per %s, %s per %s — confirm before quoting"
+                              % (tgt.get("lotSize"), tgt.get("source", "?").split(",")[0], r.get("lotSize"), r.get("source", "?")))
+                        if m5 not in tgt.get("notes", ""):
+                            tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m5
+                        conflicts.append((a, tgt["id"], tgt.get("address"), "lot", str(tgt.get("lotSize")), str(r.get("lotSize"))))
+                    # LIST DATE. The card's days-on-market colour is computed from the one date it
+                    # keeps (the first source's), so a week-plus disagreement changes what a broker
+                    # sees. Larue Rd, Vancleave: Moody's 2026-09-14, Crexi 2026-09-23; 1679 Old
+                    # Fannin Rd: CoStar 2026-09-25, Moody's 2026-09-09 (2026-09-29).
+                    da, db = tgt.get("listDate"), r.get("listDate")
+                    if a in ("forSale", "forLease") and da and db:
+                        try:
+                            _gap = abs((datetime.date.fromisoformat(da) - datetime.date.fromisoformat(db)).days)
+                        except ValueError:
+                            _gap = 0
+                        if _gap >= 7:
+                            m6 = ("Sources disagree on the list date: %s per %s, %s per %s; days on market use the first"
+                                  % (da, tgt.get("source", "?").split(",")[0], db, r.get("source", "?")))
+                            if m6 not in tgt.get("notes", ""):
+                                tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m6
+                            conflicts.append((a, tgt["id"], tgt.get("address"), "list date", da, db))
                     # An ALIAS joins records whose addresses genuinely differ (a different house
                     # number, a different city). Say what the other source calls it, so a broker
                     # who searches by the other address still recognises the card.

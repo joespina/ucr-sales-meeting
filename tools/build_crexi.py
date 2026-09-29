@@ -129,6 +129,12 @@ DROP = {
 # Address corrections, by asset id, with the evidence.
 ADDR_FIX = {
  "1263167": ("8930 Lorraine Road, Lot B", "Crexi publishes the street as \"8930 Lorraine Road Lot: B B\""),
+ "2720583": ("US Highway 49 (7.1 AC tract)", "Crexi publishes the street as \"7.1 Acres U S Highway 49\""),
+ "2720582": ("US Highway 49 & Old Pearson Rd", "Crexi publishes the street as \"U S Highway 49\"; the listing "
+             "places the 2.87 acres at U.S. Highway 49 and Old Pearson Rd"),
+ "2720712": ("717 Highway 80 E", "Crexi files this at 717 US 80, Jackson, MS 39110, but the listing places it on "
+             "Hwy 80 between Sutherland and the outlet mall entrance, which is Pearl; Crexi listed 717 Highway 80 E, "
+             "Pearl for lease in the September 23 report", "Pearl", "39208"),
  "2716460": ("Larue Rd", "Crexi files this 18-acre parcel (APN 0-34-25-010.050) at 16701 Larue Road, the "
              "address of the adjoining 36.6-acre tract (APN 0-34-25-010.075, listed separately); shown "
              "as Larue Rd, as Moody's publishes it"),
@@ -142,6 +148,23 @@ NOTE = {
             "full-service basis\" for the \u00b12,300 SF upstairs suite",
 }
 LOT_FIX = {"2721715": "4.63 AC"}
+
+# Hattiesburg ZIP 39402 straddles Forrest and Lamar counties, so the city map guesses wrong
+# for west Hattiesburg: 6051 US-98 (Oak Leaf Plaza, beside Turtle Creek Mall) and 3239 Oak
+# Grove went out as Forrest County on 2026-09-29. Every CoStar/Moody's record on US-98 or Oak
+# Grove Rd in 39402 since July says Lamar. In a split ZIP, no guess: an id-level fix or blank.
+SPLIT_ZIPS = {("Hattiesburg", "39402")}
+COUNTY_FIX = {
+ "2696375": "Lamar",     # 6051 US-98 -- CoStar/Moody's: 6341, 6504, 6690, 7127 US-98 are Lamar
+ "2721715": "Lamar",     # 3239 Oak Grove -- CoStar: 2006 and 2008 Oak Grove Rd are Lamar
+ "2715151": "Forrest",   # 10 Gateway Dr -- CoStar, Sep 23 report
+ "2715093": "Forrest",   # 48 Rawls Springs Loop Rd -- CoStar, Sep 23 report
+ "1258580": "Forrest",   # same property, lease listing
+}
+def _county(aid, city, zp):
+    if aid in COUNTY_FIX: return COUNTY_FIX[aid] + ' County'
+    if (city, zp) in SPLIT_ZIPS: return ''
+    return (COUNTY.get(city, '') + ' County') if COUNTY.get(city) else ''
 
 def classify(spec):
     s = spec.lower()
@@ -171,7 +194,9 @@ def build(path, keys, kind, start=0):
         spec = re.sub(r'\s+', ' ', _spec).strip(' ,|')
         extra_notes = []
         if aid in ADDR_FIX:
-            addr, why = ADDR_FIX[aid]; extra_notes.append(why)
+            _fx = ADDR_FIX[aid]
+            addr, why = _fx[0], _fx[1]; extra_notes.append(why)
+            if len(_fx) > 2: city, zp = _fx[2], _fx[3]      # the city/zip Crexi published was wrong too
         if aid in NOTE: extra_notes.append(NOTE[aid])
         if kind == 'sale' and photo and not photo.startswith(('assets/', 'lease-assets/')):
             photo = 'assets/' + photo
@@ -222,8 +247,14 @@ def build(path, keys, kind, start=0):
             _l = re.match(r'([\d.]+)', lot or '')
             _lsf = float(_l.group(1)) * 43560 if _l else 0
             if not (_lsf and abs(_s - _lsf) / _lsf < 0.05):
-                extra_notes.append('Crexi lists %s of building area on this land listing' % size)
+                extra_notes.append('Crexi lists %s of building area%s on this land listing'
+                                   % (size, (' (built %s)' % yb) if yb else ''))
             size = ''
+        if ty == 'Land' and yb:
+            # The year built on a Land listing is the ancillary house's, not the offering's.
+            if not any('building area' in n for n in extra_notes):
+                extra_notes.append('Crexi lists a year built of %s on this land listing' % yb)
+            yb = ''
         notes = [spec] if spec else []
         if pg.get('types') and ',' in pg['types']: notes.append('Crexi property types: ' + pg['types'])
         if pg.get('sub'): notes.append('Crexi sub type: ' + pg['sub'])
@@ -238,7 +269,7 @@ def build(path, keys, kind, start=0):
             notes.append('Days on market not published for this listing')
         d = dict(address=addr, city=city, state='MS', zip=zp,
                  zoning=pg.get('zoning', ''), contact=pg.get('agent', ''), office=pg.get('firm', ''),
-                 county=(COUNTY.get(city,'') + ' County') if COUNTY.get(city) else '',
+                 county=_county(aid, city, zp),
                  type=ty, isLand=(ty == 'Land'), size=size, lotSize=lot, units=units,
                  yearBuilt=yb, listDate=ld, domLabel=('' if ld else 'N/A'), source='crexi',
                  crexiUrl=('https://www.crexi.com/lease/properties/' + aid) if kind == 'lease'

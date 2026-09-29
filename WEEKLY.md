@@ -10,7 +10,11 @@ Confirm the window with Jo if it matters; she sets it. Anything that also appear
 previous week's report gets a note **"Also appeared in the <date> report"** rather than being
 dropped — she chose labelled repeats over silent gaps. **`tools/mark_repeats.py` does this**;
 run it after `merge_all` and before `apply_block`. It went unimplemented until 2026-09-08, when
-a re-check found 16 unlabelled repeats already deployed.
+a re-check found 16 unlabelled repeats already deployed. Since 2026-09-29 it also matches on a
+loose key (Street/St, West/W, Road/Rd folded) — "409 W Oak St" vs "409 West Oak Street" had
+slipped through — and, when a repeat's list date this week falls after last week's window (or is
+missing), it carries last week's date and says so on the card, so a returning listing does not
+show as "new".
 
 ---
 
@@ -152,7 +156,11 @@ node -e "const h=require('fs').readFileSync('index.html','utf8');
 blank for a withheld "Undisclosed" address), so an alias or address fix can no longer leave a
 stale map link behind. `merge_all` now also notes a **size** disagreement (>10%, not on leases,
 where one source's size is the building and another's the suite) and, when an alias joins two
-genuinely different addresses, what the other source calls the property.
+genuinely different addresses, what the other source calls the property. It also notes a **lot**
+disagreement (for sale, >10% and at least 0.05 AC) and a **list date** disagreement of 7+ days,
+because the days-on-market colour is computed from the one date the card keeps. On a Land card,
+a building size or year built that a source publishes (usually an old house on the tract) goes to
+the notes, not the columns.
 
 **Always write the coverage note** (`build/coverage_<key>.html`, passed as the last argument
 above). It renders as a banner above the tabs and says what the week's pull reached and what it

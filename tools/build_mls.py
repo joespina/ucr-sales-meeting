@@ -226,7 +226,12 @@ for section, p in parse_pipe(RAW):
         is_land = (ty == 'Land')
     if not ty: ty = 'Commercial'
     if ty == 'Land': is_land = True
+    # A Land card's size column is the BUILDING. Where MLS reports a building on what is being
+    # sold as land -- a 1949 residence on 9.13 AC (4163519), an old house "of no contributory
+    # value" on 2.10 AC (4163821) -- say so in the notes rather than show it as the building.
     notes = [d[:300]] if d else []
+    if ty == 'Land' and bsf:
+        notes.append('MLS reports %s of building area on this land listing' % bsf); bsf = ''
     if lid in LAND_SF:
         notes.append('MLS reports the lot area in its building-size field for this listing; '
                      'shown as land area')

@@ -37,24 +37,65 @@ NOTE = "Also appeared in the %s report" % PREV_LABEL
 # the house number, and the listing stopped counting as a repeat although it is the same
 # listing (2026-09-22). A source URL or MLS# is the identity that survives that, so match
 # on either.
+# Match on the address with suffix and direction spelling folded, too: "409 West Oak Street"
+# (Crexi, this week) is "409 W Oak St" (CoStar, last week), and "48 Rawls Springs Loop Road"
+# is "... Loop Rd". Both were missed on 2026-09-29, three cards in all.
+_SUFFIX = {"road": "rd", "drive": "dr", "street": "st", "avenue": "ave", "boulevard": "blvd",
+           "highway": "hwy", "parkway": "pkwy", "circle": "cir", "cove": "cv", "court": "ct",
+           "lane": "ln", "place": "pl", "north": "n", "south": "s", "east": "e", "west": "w"}
+def loose(addr):
+    return " ".join(_SUFFIX.get(w, w) for w in norm(addr).split())
+
 def keys_of(r):
-    ks = {("addr", norm(r.get("address")), norm(r.get("city")))}
+    ks = {("addr", norm(r.get("address")), norm(r.get("city"))),
+          ("loose", loose(r.get("address")), norm(r.get("city")))}
     for f in ("moodysUrl", "crexiUrl", "mlsUrl"):
         v = str(r.get(f) or "").strip()
         if v: ks.add((f, v))
     if r.get("mlsNum"): ks.add(("mlsNum", str(r["mlsNum"]).strip()))
     return ks
 
+# A repeat cannot have been listed AFTER the report it already appeared in. 903 Wholesale
+# Row was in the Sep 23 report listed Jul 31 (Moody's) and came back this week from CoStar and
+# Crexi as listed Sep 25 -- the card read "5 days, new" (2026-09-29). When this week's list
+# date is later than the previous window's last day, or missing, carry the earlier one and say
+# where both came from. The previous window ends two days before the previous meeting.
+import datetime
+PREV_END = (datetime.date(int(PREV_KEY[:4]), int(PREV_KEY[4:6]), int(PREV_KEY[6:])) - datetime.timedelta(days=2)).isoformat()
+carried = []
+
 marked = []
 for a in ARRAYS:
-    seen = set()
-    for r in prev.get(a, []): seen |= keys_of(r)
+    seen, by_key = set(), {}
+    for r in prev.get(a, []):
+        ks = keys_of(r); seen |= ks
+        for k in ks: by_key.setdefault(k, r)
     for r in data.get(a, []):
-        if keys_of(r) & seen:
+        hit = keys_of(r) & seen
+        if hit:
             if NOTE not in (r.get("notes") or ""):
                 r["notes"] = (r["notes"] + " · " if r.get("notes") else "") + NOTE
             marked.append((a, r["id"], r["address"], r["city"]))
+            if a in ("forSale", "forLease") and r.get("domLabel") != "Under Contract":
+                q = by_key[sorted(hit)[0]]
+                pld, cld = str(q.get("listDate") or ""), str(r.get("listDate") or "")
+                if pld and pld <= PREV_END and (not cld or cld > PREV_END):
+                    r["listDate"], r["domLabel"] = pld, ""
+                    msg = ("List date %s carried from the %s report (%s); %s" %
+                           (pld, PREV_LABEL, q.get("source", "?"),
+                            ("this week's card date, %s (%s), falls after that report's window"
+                             % (cld, (r.get("source") or "?").split(",")[0])) if cld
+                            else "no list date published this week"))
+                    # merge_all's list-date disagreement note says the card uses the first
+                    # source's date; after a carry it does not.
+                    r["notes"] = r["notes"].replace("; days on market use the first",
+                                                    "; days on market use the date carried from the previous report")
+                    if msg not in r["notes"]: r["notes"] += " · " + msg
+                    carried.append((r["address"], cld or "none", pld))
 
 json.dump(data, open(RECORDS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("marked %d repeat(s) from %s" % (len(marked), PREV_LABEL))
+if carried:
+    print("list date carried from the previous report (%d):" % len(carried))
+    for c in carried: print("   %s: %s -> %s" % c)
 for m in marked: print("  ", m)

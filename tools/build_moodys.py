@@ -215,6 +215,12 @@ SIZE_DROP = {
  "45651115": "Moody's lists a 325,841 SF building on this tract, but the listing describes "
              "wooded, undeveloped acreage and the record carries no year built; the building "
              "size is not shown",
+ # Larue Rd, Vancleave: an 18 AC agricultural tract (Crexi 2716460 is the same land). Moody's
+ # carries a 770 SF building (year built 1973, status "Proposed"); the listing text names no
+ # building. Stated, not shown as the building on a Land card.
+ "45672412": "Moody's lists a 770 SF building (year built 1973, status Proposed) on this 18 AC "
+             "tract, but the listing describes open rural land and names no building; the "
+             "building size is not shown",
 }
 
 COMPANY = re.compile(r'(LLC|L\.L\.C|Inc\b|Group|Properties|Realty|Associates|Company|Partners|'
@@ -343,6 +349,7 @@ for (deal, _a, _c), g in groups.items():
     for l in lids:
         if l in SIZE_DROP:
             bsize = ''; notes.insert(0, SIZE_DROP[l])
+    _dropped = any(l in SIZE_DROP for l in lids)   # its Year Built belongs to the dropped building
     lot = lot_of(kv)
     rec_ac = next((lotac[l] for l in lids if l in lotac), 0.0)
     if not lot and rec_ac:
@@ -356,7 +363,7 @@ for (deal, _a, _c), g in groups.items():
                          if (kv.get('County') or any(l in lotcty for l in lids)) else '',
                   type=ptype, isLand=is_land, marketingName=_mk(r0, addr),
                   size=bsize, lotSize=lot,
-                  yearBuilt=(kv.get('Year Built') or kv.get('Year Built/Renovated') or '').split('/')[0],
+                  yearBuilt='' if _dropped else (kv.get('Year Built') or kv.get('Year Built/Renovated') or '').split('/')[0],
                   zoning=kv.get('Zoning', ''), contact=contact, office=office,
                   listDate=listDate, domLabel=('' if listDate else 'N/A'), source='moodys',
                   moodysUrl=('https://members.moodyscre.com/property/' + ident) if ident else '',
