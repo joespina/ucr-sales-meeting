@@ -13,9 +13,21 @@ derived from each property page's own days-on-market, not from the filter.
 """
 import json, re, sys, datetime
 
-SALE_IN, OUT = sys.argv[1], sys.argv[2]
-LEASE_IN = sys.argv[3] if len(sys.argv) > 3 else None
-EXPORT_DATE = datetime.date(2026, 9, 22)   # the date the days-on-market figures were read
+# Positional: sale_raw out [lease_raw]. Options: --page FILE, --lease-page FILE, --date YYYY-MM-DD
+_args, _opts, _k = [], {}, None
+for _a in sys.argv[1:]:
+    if _k: _opts[_k] = _a; _k = None
+    elif _a.startswith('--'): _k = _a[2:]
+    else: _args.append(_a)
+SALE_IN, OUT = _args[0], _args[1]
+LEASE_IN = _args[2] if len(_args) > 2 else None
+# The date the days-on-market figures were READ off the property pages. It was a hardcoded
+# constant (2026-09-22) -- the same forgotten-constant trap parse_costar's footer date fixed.
+if 'date' in _opts:
+    EXPORT_DATE = datetime.date.fromisoformat(_opts['date'])
+else:
+    EXPORT_DATE = datetime.date.today()
+    print('WARNING: --date not given; days on market read as of', EXPORT_DATE.isoformat())
 # Sale photos hang off /assets/, lease photos off /lease-assets/; the raw files carry
 # whichever prefix the card had, so only the common part is prepended here.
 IMGBASE = "https://crexi.com/images/format=auto,width=620,height=400,fit=cover/"
@@ -37,7 +49,15 @@ COUNTY = {"Natchez":"Adams","Hattiesburg":"Forrest","Jackson":"Hinds","Myrtle":"
  "Clinton":"Hinds","Saltillo":"Lee","Corinth":"Alcorn","Holcomb":"Grenada","Tupelo":"Lee","Carthage":"Leake",
  "Ridgeland":"Madison","Olive Branch":"DeSoto","Laurel":"Jones","Starkville":"Oktibbeha","Kosciusko":"Attala",
  "Gulfport":"Harrison","Forest":"Scott","Vicksburg":"Warren","Terry":"Hinds","Biloxi":"Harrison",
- "Hazlehurst":"Copiah","Madison":"Madison","Magee":"Simpson","Magnolia":"Pike"}
+ "Hazlehurst":"Copiah","Madison":"Madison","Magee":"Simpson","Magnolia":"Pike",
+ # added 2026-09-29
+ "Pearl":"Rankin","Brandon":"Rankin","Flowood":"Rankin","Richland":"Rankin","Florence":"Rankin",
+ "Ripley":"Tippah","Walnut":"Tippah","Greenville":"Washington","Leland":"Washington",
+ "Brookhaven":"Lincoln","Vancleave":"Jackson","Pascagoula":"Jackson","Gautier":"Jackson",
+ "Moss Point":"Jackson","Ocean Springs":"Jackson","Southaven":"DeSoto","Hernando":"DeSoto",
+ "Horn Lake":"DeSoto","Canton":"Madison","Shannon":"Lee","Prentiss":"Jefferson Davis",
+ "Picayune":"Pearl River","Carriere":"Pearl River","Lexington":"Holmes","Grenada":"Grenada",
+ "Bay Saint Louis":"Hancock","Waveland":"Hancock","Columbus":"Lowndes","Byram":"Hinds"}
 
 TYPES = ["Retail","Office","Industrial","Land","Multifamily","Mixed Use","Hospitality","Flex","Special Purpose",
          "Self Storage","Mobile Home Park","Senior Living"]
@@ -61,6 +81,68 @@ PAGE_FIX = {
  "1245676": ("Retail", "", "100,861", "NNN"),
 }
 
+# Per-property facts read off each Crexi PROPERTY PAGE in the same pull (see
+# tools/browser_pulls.md): id|type|subtype|SF|acres|zoning|agent|firm (sale) and
+# id|type|subtype|buildingSF|leaseType|agent|firm|rate|desc (lease). The result card alone
+# is not enough -- 11 of 44 cards were untyped on 2026-09-22.
+def _strip_initials(name):
+    """Crexi renders a broker with no headshot as an initials avatar, and the page text reads
+    "SC Scott Cote", "CM Charles McGee". Drop the avatar when it is exactly the initials."""
+    m = re.match(r'^([A-Z]{2,3}) (.+)$', name or '')
+    if m and ''.join(w[0] for w in m.group(2).split()[:len(m.group(1))]).upper() == m.group(1):
+        return m.group(2)
+    return name
+
+def _load_page(path, kind):
+    out = {}
+    if not path: return out
+    for line in open(path, encoding='utf-8'):
+        line = line.rstrip('\n')
+        if not line or line.startswith('#'): continue
+        p = (line.split('|') + [''] * 9)[:9]
+        if kind == 'sale':
+            aid, ty, sub, sf, ac, zon, ag, firm = p[:8]; lt = ''
+        else:
+            aid, ty, sub, sf, lt, ag, firm = p[:7]; ac = zon = ''
+        ty = re.sub(r'\s+Class\s+[A-D]\b', '', ty)
+        sub = re.sub(r'\s*\(\+\d+\)', '', sub).strip()
+        first = re.sub(r'\s*\(\+\d+\)', '', ty).split(',')[0].strip()
+        out[aid] = dict(type=first, types=re.sub(r'\s*\(\+\d+\)', '', ty).strip(), sub=sub,
+                        sf=sf.strip(), ac=ac.strip(), zoning=zon.strip().rstrip(','),
+                        agent=_strip_initials(re.sub(r'\s+\d{3}[.-]\d{3}[.-]\d{4}$', '', ag.strip())),
+                        firm=firm.strip(), lease_type=lt.strip())
+    return out
+PAGE = _load_page(_opts.get('page'), 'sale')
+PAGE.update(_load_page(_opts.get('lease-page'), 'lease'))
+
+# Standing rule: no residential in any array. Crexi is not commercial-only; every drop is
+# recorded by asset id with the words that decided it.
+DROP = {
+ "2715046": "217 Rogers Cir, Brookhaven - 'Single Family Rental Portfolio', eight rental houses",
+ "2715215": "Belmont Estates Dr, Gautier - '99 lots on 45 acres ... approved platted lots', zoned Single Family",
+ "2715214": "Lickskillet Rd, Biloxi - 'The perfect setting for a beautiful subdivision'",
+ "2720669": "N Livingston Rd & Hwy 463, Madison - '81 acres of residential development land', zoned REA low density",
+ "2720999": "1 Hillcrest Farm Rd, Carriere - '10 contiguous lots ... build a private estate or build multiple homes'",
+ "2721548": "Barnes Rd, Florence (23 AC) - lakefront tract split from a larger parcel, 'a stunning homesite'",
+ "2721572": "Barnes Rd, Florence (10.2 AC) - lakefront tract split from a larger parcel, 'a stunning homesite'",
+}
+# Address corrections, by asset id, with the evidence.
+ADDR_FIX = {
+ "1263167": ("8930 Lorraine Road, Lot B", "Crexi publishes the street as \"8930 Lorraine Road Lot: B B\""),
+ "2716460": ("Larue Rd", "Crexi files this 18-acre parcel (APN 0-34-25-010.050) at 16701 Larue Road, the "
+             "address of the adjoining 36.6-acre tract (APN 0-34-25-010.075, listed separately); shown "
+             "as Larue Rd, as Moody's publishes it"),
+}
+NOTE = {
+ "2712632": "Business-only sale of two Denny's franchise restaurants; the real estate is not included "
+            "and Crexi does not disclose the locations",
+ "2716147": "Crexi publishes the acreage as 77,340, which is the lot in square feet (1.78 AC)",
+ "2721715": "The listing describes a 4.63\u00b1 acre mixed-use (MX) development site",
+ "1261133": "Crexi shows the rate as undisclosed, but the listing text reads \"$5,750 per month on a "
+            "full-service basis\" for the \u00b12,300 SF upstairs suite",
+}
+LOT_FIX = {"2721715": "4.63 AC"}
+
 def classify(spec):
     s = spec.lower()
     for t in TYPES:
@@ -77,6 +159,20 @@ def build(path, keys, kind, start=0):
         if not line or line.startswith('#'): continue
         p = (line.split('~') + ['']*9)[:9]
         aid, dom, price, addr, city, zp, spec, yb, photo = p
+        if aid in DROP:
+            DROPPED.append('%s: %s' % (aid, DROP[aid])); continue
+        pg = PAGE.get(aid, {})
+        # The card's spec text repeats the street and the "street, City, MS zip" line when a
+        # listing has no marketing name ("0 Ellis Avenue 0 Ellis Avenue, Jackson, MS 39209").
+        _spec = spec
+        for junk in (addr + ', ' + city + ', MS ' + zp, addr + ', ' + city + ', MS, ' + zp):
+            _spec = _spec.replace(junk, ' ')
+        _spec = re.sub(r'\b' + re.escape(addr) + r'\b', ' ', _spec) if addr and len(addr) > 6 else _spec
+        spec = re.sub(r'\s+', ' ', _spec).strip(' ,|')
+        extra_notes = []
+        if aid in ADDR_FIX:
+            addr, why = ADDR_FIX[aid]; extra_notes.append(why)
+        if aid in NOTE: extra_notes.append(NOTE[aid])
         if kind == 'sale' and photo and not photo.startswith(('assets/', 'lease-assets/')):
             photo = 'assets/' + photo
         i += 1
@@ -86,6 +182,7 @@ def build(path, keys, kind, start=0):
         ty = classify(spec)
         fix = PAGE_FIX.get(aid)
         if fix and fix[0]: ty = fix[0]
+        if pg.get('type'): ty = pg['type']
         m = re.search(r'([\d,]+)\s*(?:SqFt|SF)\b', spec)
         size = (m.group(1) + ' SF') if m else ''
         m = re.search(r'([\d.]+)\s*(?:acres|AC)\b', spec, re.I)
@@ -107,8 +204,32 @@ def build(path, keys, kind, start=0):
         units = m.group(1) if m else ''
         if fix:
             if fix[2] and not size: size = fix[2] + ' SF'
-        notes = [spec]
-        if fix and fix[1]: notes.append('Crexi sub type: ' + fix[1])
+        if re.match(r'0+ SF$', size or ''): size = ''     # "Office | 0 SF" (411 S State St, Clarksdale)
+        if pg.get('sf') and not size and pg['sf'].replace(',', '').isdigit() and int(pg['sf'].replace(',', '')) > 0:
+            size = pg['sf'] + ' SF'
+        if aid in LOT_FIX and not lot: lot = LOT_FIX[aid]
+        if pg.get('ac') and not lot:
+            try:
+                _ac = float(pg['ac'].replace(',', ''))
+                if _ac > 1000: _ac = _ac / 43560      # published as SF (Comfort Suites, 77,340)
+                lot = ('%.2f AC' % _ac) if _ac else ''
+            except ValueError: pass
+        if ty == 'Land' and size:
+            # On a Land listing the page's square footage is the lot or an ancillary house
+            # (5447 Hwy 80 E: a 1,840 SF 1949 residence on 9.13 AC). Keep it out of `size`,
+            # and only mention it when it is NOT simply the lot restated in SF.
+            _s = float(size.replace(',', '').replace(' SF', ''))
+            _l = re.match(r'([\d.]+)', lot or '')
+            _lsf = float(_l.group(1)) * 43560 if _l else 0
+            if not (_lsf and abs(_s - _lsf) / _lsf < 0.05):
+                extra_notes.append('Crexi lists %s of building area on this land listing' % size)
+            size = ''
+        notes = [spec] if spec else []
+        if pg.get('types') and ',' in pg['types']: notes.append('Crexi property types: ' + pg['types'])
+        if pg.get('sub'): notes.append('Crexi sub type: ' + pg['sub'])
+        elif fix and fix[1]: notes.append('Crexi sub type: ' + fix[1])
+        if pg.get('lease_type'): notes.append('Lease type: ' + pg['lease_type'])
+        notes.extend(extra_notes)
         if not photo:
             # Crexi serves a generic map graphic when a listing has no photo of its own;
             # that placeholder is dropped at capture time, so a blank here is a real gap.
@@ -116,6 +237,7 @@ def build(path, keys, kind, start=0):
         if not ld:
             notes.append('Days on market not published for this listing')
         d = dict(address=addr, city=city, state='MS', zip=zp,
+                 zoning=pg.get('zoning', ''), contact=pg.get('agent', ''), office=pg.get('firm', ''),
                  county=(COUNTY.get(city,'') + ' County') if COUNTY.get(city) else '',
                  type=ty, isLand=(ty == 'Land'), size=size, lotSize=lot, units=units,
                  yearBuilt=yb, listDate=ld, domLabel=('' if ld else 'N/A'), source='crexi',
@@ -130,7 +252,19 @@ def build(path, keys, kind, start=0):
                 notes.append('Price not published on Crexi' if 'bid' not in price.lower()
                              else 'Offered at auction - starting bid not published')
                 d['notes'] = ' · '.join(notes)
-            out.append(rec(keys, dict(d, id=f"cx{i}", price=('' if unpriced else price), capRate=cap)))
+            flags = ''
+            _pn = re.match(r'\$([\d,]+)$', price.strip())
+            _sz = re.match(r'([\d,]+) SF', size or '')
+            if _pn and _sz and ty != 'Land':
+                _ppsf = float(_pn.group(1).replace(',', '')) / float(_sz.group(1).replace(',', ''))
+                if _ppsf < 1.0:
+                    # 2214-A Green St, Tupelo: "$12,500" on 50,000 SF of warehouse (2026-09-29).
+                    notes.append('Crexi publishes a $%s sale price on %s, which is $%.2f/SF and reads '
+                                 'as a monthly rent rather than a sale price; confirm with the listing '
+                                 'broker before quoting it' % (_pn.group(1), size, _ppsf))
+                    d['notes'] = ' · '.join(notes); flags = 'Check price'
+            out.append(rec(keys, dict(d, id=f"cx{i}", price=('' if unpriced else price), capRate=cap,
+                                      flags=flags)))
         else:
             # Crexi prints the rate with its own unit: "$9.50/SF/YR", "$1.33/SF/MO",
             # "$6-$12/SF/YR". Split the number from the unit so the renderer does not
@@ -159,11 +293,42 @@ def build(path, keys, kind, start=0):
             out.append(rec(keys, dict(d, id=f"cxl{i}", askingRate=rate, leaseType=unit)))
     return out
 
+DROPPED = []
 forSale = build(SALE_IN, FS_KEYS, 'sale')
 forLease = build(LEASE_IN, FL_KEYS, 'lease') if LEASE_IN else []
+
+# One card per property: Crexi files separate suites in one building as separate lease
+# listings with the suite glued onto the street ("2318 Pass Road 7c", "2318 Pass Road 3",
+# 2026-09-29). Group on the street with a trailing suite token removed; only collapse a
+# group that really has more than one member.
+_SUITE = re.compile(r'^(\d[\w-]*\s+.+?\b(?:Road|Rd|Street|St|Drive|Dr|Avenue|Ave|Boulevard|Blvd|Parkway|Pkwy|Highway|Hwy|Lane|Ln|Way|Plaza|Plz))\s*,?\s*(?:Suite\s+|Ste\s+|Unit\s+|#)?([A-Z0-9]{1,4})$', re.I)
+def _consolidate(rows):
+    groups = {}
+    for r in rows:
+        m = _SUITE.match(r['address'])
+        base = m.group(1) if m else r['address']
+        groups.setdefault((base.lower(), r['city'].lower()), []).append((r, m))
+    out = []
+    for (base, _c), g in groups.items():
+        if len(g) == 1:
+            out.append(g[0][0]); continue
+        r = dict(g[0][0]); r['address'] = g[0][1].group(1) if g[0][1] else r['address']
+        sizes = sorted(int(x[0]['size'].replace(',', '').replace(' SF', '')) for x in g if x[0]['size'])
+        if sizes: r['size'] = ('{:,} SF'.format(sizes[0]) if sizes[0] == sizes[-1]
+                               else '{:,} - {:,} SF'.format(sizes[0], sizes[-1]))
+        suites = ', '.join(x[1].group(2).upper() for x in g if x[1])
+        r['notes'] = r['notes'] + ' · %d suites listed separately on Crexi (%s), consolidated into one card' % (len(g), suites)
+        r['crexiUrl'] = g[0][0]['crexiUrl']
+        out.append(r)
+    return out
+forLease = _consolidate(forLease)
 json.dump(dict(forSale=forSale, forLease=forLease, saleComps=[], leaseComps=[]),
           open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('forSale', len(forSale), 'forLease', len(forLease))
 print('with photo:', sum(1 for r in forSale+forLease if r['photoUrl']), '/', len(forSale)+len(forLease))
 print('with listDate:', sum(1 for r in forSale+forLease if r['listDate']))
 print('untyped:', [r['address'] for r in forSale+forLease if not r['type']])
+print('read as of:', EXPORT_DATE.isoformat())
+if DROPPED:
+    print('DROPPED as residential (%d):' % len(DROPPED))
+    for x in DROPPED: print('   -', x)

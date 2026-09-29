@@ -370,3 +370,34 @@ Each `javascript_tool` call must finish inside ~45 s of CDP time. Four property 
 parallel is about the limit; a batch that times out loses everything the call did, including
 function definitions. Store results in a `window` object and drive batches from a separate
 call, so a timeout costs one batch rather than the run.
+
+
+### 2026-09-29: every card rendered — scroll the PAGE, and read the property pages
+
+For Sale Sep 21–28: the filter panel said 67 (all types) / **59** (Land → Residential off), the
+first render showed 30, and **scrolling the page with the mouse wheel (40 ticks) rendered all
+59** — no pagination needed. Harvest after scrolling, store the harvest in `localStorage` as
+well as `window` (localStorage survives a navigation), then dump. Lease: 26 of 26 the same way.
+
+Property pages (hidden same-origin iframe, 3–4 per call; 8 per call hit the 45 s limit):
+
+- **Sale**: `… Listed by <firm> <price> N days on market … Details Property Type <types> Sub Type
+  <subs> Square Footage N Acreage N … Marketing description … Listing Contacts`. The broker
+  name sits between "Photos " and " PRO"/"View phone number"; a broker with no headshot is
+  rendered as an initials avatar ("SC Scott Cote") — `build_crexi` strips it.
+- **Lease**: `… Listed by <firm> <rate> N days on market … Building Details Property Type <type>
+  [Class X] Total Building SqFt N … Sub Type … Lease Type … Building description …`.
+- Crexi's "Acreage" is sometimes square feet (Comfort Suites: 77,340 = 1.78 AC).
+
+**Link resolution**: load `/properties/{id}` (or `/lease/properties/{id}`) in an iframe and read
+`contentDocument.title` (`"<street>, <city>, MS <zip> For Sale | Crexi.com"`) and the redirected
+path (`/properties/{id}/<slug>`). A bogus id gives "Error 404 @/404", so the test discriminates.
+Run it from **`https://www.crexi.com/robots.txt`** as the host page: from the search page the
+renderer bogged down and batches of 5 timed out. 77 of 77 resolved on 2026-09-29.
+
+## Moody's map file: fields 6–8
+
+`idx|dashed-id|listingIds|street, city|photo|acres|CATEGORY|county` — acres (`lot.totalAcres`),
+category and county off the property record. On 2026-09-29 the PDF had "Total Available
+Space: Unknown" on every land listing and no Property Type row, so without these the land cards
+had no acreage and two tracts were typed "Commercial".

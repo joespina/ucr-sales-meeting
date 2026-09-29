@@ -110,6 +110,21 @@ def amenities(body):
     a = m.group(1).strip()
     return '' if a.lower().startswith('no data') else a
 
+# The LISTING export carries the leasing broker as a bare line under the summary and again
+# under Available Spaces: "Myers Commercial Real Estate: RL Morgan (901) 387-8986", sometimes
+# with a second person after a comma. Absent from every export 2026-08-19 .. 2026-09-22,
+# back in the For Lease export on 2026-09-29 (19 of 22 entries). The For Sale export still
+# has only Recorded/True Owner.
+BROKER = re.compile(r"^\s*([A-Z0-9][^:\n]{1,70}?):\s+((?:[A-Z][A-Za-z.'\- ]+\s\(\d{3}\)\s\d{3}-\d{4}(?:,\s*)?)+)\s*$", re.M)
+
+def brokers(body):
+    """(office, 'Name (phone), Name (phone)') of the first broker line, or ('', '')."""
+    for m in BROKER.finditer(body):
+        office, people = m.group(1).strip(), m.group(2).strip().rstrip(',')
+        if office.lower().startswith(('contacts', 'type')): continue
+        return office, people
+    return '', ''
+
 FOOTER_DATE = re.compile(r'Licensed to NAI UCR Properties[^\n]*?(\d{1,2}/\d{1,2}/\d{4})')
 
 def export_date(path):
@@ -131,6 +146,7 @@ if __name__ == '__main__':
     print('entries:', len(bs), '->', [b['num'] for b in bs])
     for b in bs:
         b['kv'] = kvpairs(b['body']); b['spaces'] = spaces(b['body']); b['amen'] = amenities(b['body']); b['owner'] = owner(b['body'])
+        b['office'], b['contact'] = brokers(b['body'])
         b.pop('body')
     json.dump(bs, open(sys.argv[2],'w'), indent=1)
     ks = {}

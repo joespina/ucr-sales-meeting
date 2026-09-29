@@ -3,8 +3,9 @@
 Live dashboard: **https://purple-hill-0cd2cb610.7.azurestaticapps.net/**
 Meeting: **Wednesdays.** The meeting date is the `MEETINGS` key, e.g. `20260902` → "September 2, 2026".
 
-The window is the **8 days ending the Tuesday before the meeting** (2026-08-26 used Aug 17–24;
-2026-09-02 used Aug 24–31, which Jo set in the links she sent).
+The window is the **8 days ending the Monday before the meeting**, both ends inclusive, so
+consecutive windows share that Monday (Sep 14–21 for the Sep 23 meeting, Sep 21–28 for Sep 30).
+Records dated on the shared day come back as labelled repeats; that is expected.
 Confirm the window with Jo if it matters; she sets it. Anything that also appeared in the
 previous week's report gets a note **"Also appeared in the <date> report"** rather than being
 dropped — she chose labelled repeats over silent gaps. **`tools/mark_repeats.py` does this**;
@@ -116,7 +117,22 @@ Period option is not a listing-date filter. Expect a couple of cards never to re
 sort order once to shake out extras, then state the shortfall in the coverage banner rather than
 grinding. Full detail in `tools/browser_pulls.md`.
 
-    python3 tools/build_crexi.py build/crexi_sale_raw.txt build/crexi.json build/crexi_lease_raw.txt
+    python3 tools/build_crexi.py build/crexi_sale_raw.txt build/crexi.json build/crexi_lease_raw.txt \
+        --page build/crexi_sale_page.txt --lease-page build/crexi_lease_page.txt --date 2026-09-29
+
+`--date` is the day the days-on-market figures were READ (it used to be a hardcoded constant).
+The two page files carry what each Crexi PROPERTY page says (type, sub type, SF, acres, zoning,
+broker) — a result card alone is often untyped. Residential drops, address corrections and
+per-listing notes live in `DROP` / `ADDR_FIX` / `NOTE` / `LOT_FIX` by asset id, each with the
+words that decided it.
+
+### Moving any pull into the container: verify it byte-for-byte
+
+Every browser pull reaches the container by being re-typed from `get_page_text` output. Check it:
+hash the joined lines in the page and print the first 16 hex chars **with spaces** (a bare hex
+string is blocked as "Base64"), then `printf '%s' "$(cat file)" | sha256sum` in the container.
+2026-09-29: five files, all matched; the only differences ever seen are trailing spaces that
+`get_page_text` trims.
 
 ## 5. Merge, check, apply
 
@@ -131,6 +147,12 @@ python3 tools/apply_block.py 20260902 "September 2, 2026" build/records_20260902
 node -e "const h=require('fs').readFileSync('index.html','utf8');
   [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((b,i)=>{new Function(b[1]);console.log('script',i,'OK')})"
 ```
+
+`apply_block` now regenerates every `mapUrl` from the record's final address (and leaves it
+blank for a withheld "Undisclosed" address), so an alias or address fix can no longer leave a
+stale map link behind. `merge_all` now also notes a **size** disagreement (>10%, not on leases,
+where one source's size is the building and another's the suite) and, when an alias joins two
+genuinely different addresses, what the other source calls the property.
 
 **Always write the coverage note** (`build/coverage_<key>.html`, passed as the last argument
 above). It renders as a banner above the tabs and says what the week's pull reached and what it

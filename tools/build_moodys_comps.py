@@ -3,7 +3,7 @@
 
     python3 tools/build_moodys_comps.py build/moodys_comps_raw.txt build/moodys_comps.json
 
-Line: propertyId|address|city|zip|county|CATEGORY/SUB|acres|yearBuilt|bldgSF|price|closeDate|pricePerSF|priceSource|buyer|photoPath
+Line: propertyId|address|city|zip|county|CATEGORY/SUB|acres|yearBuilt|bldgSF|price|closeDate|pricePerSF|priceSource|buyer|photoPath[|soldSF[|note]]
 
 Two things to keep straight:
   * `dateAdded` is the ONLY date filter Moody's honours in comps mode, and it is when
@@ -39,8 +39,9 @@ for line in open(IN):
     line = line.rstrip('\n')
     if not line or line.startswith('#'): continue
     if line.startswith('!'): continue   # '!' = excluded by hand, reason in the comment
-    p = (line.split('|') + ['']*15)[:15]
-    pid, addr, city, zp, cty, cat, ac, yb, bsf, price, dt, psf, src, buyer, photo = p
+    p = (line.split('|') + ['']*17)[:17]
+    pid, addr, city, zp, cty, cat, ac, yb, bsf, price, dt, psf, src, buyer, photo, soldsf, extra = p
+    pid = pid.replace('-', '')   # ids are carried dashed out of the browser (output redaction)
     if not price and not dt:
         # no consideration and no closing date -- Moody's has the property but no
         # transaction on it; a card like that reads as a comp with nothing in it
@@ -54,12 +55,24 @@ for line in open(IN):
     if gross and lot_sf and abs(gross - lot_sf) / lot_sf < 0.01:
         gross, psf = 0.0, ''            # that "building" is the parcel
     notes = []
+    # Moody's publishes its $/SF on the SOLD SF (transaction._$soldSF), which is not always
+    # the building's gross SF. 2001 US 82, Greenwood shipped on 2026-09-23 as "9,538 SF" beside
+    # "$163.82/SF" -- but 730,000 / 9,538 is $76.54; the $163.82 is on 4,456 SF sold. Show the
+    # sold SF as the size whenever the two disagree, and say what the building record holds.
+    sold = float(soldsf) if soldsf else 0.0
+    if sold and gross and abs(sold - gross) / gross > 0.02:
+        notes.append("Moody's records %s SF as sold; its building record shows %s SF. "
+                     "The $/SF is on the sold figure" % (f"{int(sold):,}", f"{int(gross):,}"))
+        gross = sold
     if sub: notes.append(sub.replace('_', ' ').title())
     if buyer: notes.append('Buyer: ' + buyer)
     if dt: notes.append('Closed ' + dt)
     notes.append('Published to Moody\'s between %s; the closing date above is the transaction date' % WINDOW)
     if src == 'ESTIMATION':
         notes.append('Consideration estimated by Moody\'s, not a disclosed contract price')
+    elif src == 'PUBLIC_RECORD':
+        notes.append('Consideration as recorded in the public record')
+    if extra: notes.append(extra)
     out.append(rec(dict(
         id=f"mdc{i}", address=addr, city=city, state='MS', zip=zp,
         county=(cty + ' County') if cty else '', type=ty, isLand=(ty == 'Land'),

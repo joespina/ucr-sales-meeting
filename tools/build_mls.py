@@ -25,8 +25,10 @@ FS_KEYS = ["id","address","city","state","zip","county","type","isLand","marketi
            "pricePerUnit","capRate","size","lotSize","units","yearBuilt","zoning","tenant","contact","office",
            "phone","flags","alsoForLease","listDate","domLabel","source","mlsNum","costarUrl","moodysUrl",
            "crexiUrl","mlsUrl","mapUrl","photoUrl","notes"]
+# "flags" is in FL_KEYS too: a PENDING lease listing carries "Under Contract" there, and without the
+# key rec() silently dropped it (16275 Landon Rd, 2026-09-29).
 FL_KEYS = ["id","address","city","state","zip","county","type","isLand","marketingName","askingRate","leaseType",
-           "size","avail","lotSize","yearBuilt","zoning","tenant","contact","office","phone","availDate",
+           "size","avail","lotSize","yearBuilt","zoning","tenant","contact","office","phone","availDate","flags",
            "alsoForSale","listDate","domLabel","source","mlsNum","costarUrl","moodysUrl","crexiUrl","mlsUrl",
            "mapUrl","photoUrl","notes"]
 SC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketingName","size","lotSize",
@@ -37,6 +39,17 @@ LC_KEYS = ["id","address","city","state","zip","county","type","isLand","marketi
            "totalSize","signDate","leaseType","term","commenceDate","executionDate","landlord","broker","office",
            "askingRate","yearBuilt","submarket","mlsNum","source","costarUrl","mlsUrl","mapUrl","photoUrl","notes"]
 
+def demojibake(v):
+    """Agents paste text that was already mis-decoded ("This \u00c2\u00b120-suite", "renovation
+    \u00e2\u20ac\u201dfrom", 4135040 on 2026-09-29). Same repair as build_moodys."""
+    if not isinstance(v, str) or ('\u00c2' not in v and '\u00e2\u20ac' not in v and '\u00c3' not in v):
+        return v
+    try:
+        return v.encode('cp1252').decode('utf-8')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return (v.replace('\u00c2\u00b1', '\u00b1').replace('\u00e2\u20ac\u2122', '\u2019')
+                 .replace('\u00e2\u20ac\u201d', '\u2014').replace('\u00e2\u20ac\u201c', '\u2013'))
+
 def rec(keys,d): return {k: d.get(k, False if k=="isLand" else "") for k in keys}
 def mapurl(a,c): return "https://www.google.com/maps/search/?q=" + '+'.join(re.sub(r'[^A-Za-z0-9 ]',' ',(a+' '+c+' MS')).split())
 
@@ -44,7 +57,16 @@ COUNTY = {"McComb":"Pike","Pearl":"Rankin","Brandon":"Rankin","Pickens":"Holmes"
  "Southaven":"DeSoto","Rosedale":"Bolivar","Jackson":"Hinds","Biloxi":"Harrison","Picayune":"Pearl River",
  "Gulfport":"Harrison","Wiggins":"Stone","Long Beach":"Harrison","Hattiesburg":"Forrest","Kiln":"Hancock",
  "Pascagoula":"Jackson","Natchez":"Adams","Vicksburg":"Warren","Moss Point":"Jackson","Lucedale":"George",
- "Yazoo City":"Yazoo","Ocean Springs":"Jackson","Clarksdale":"Coahoma"}
+ "Yazoo City":"Yazoo","Ocean Springs":"Jackson","Clarksdale":"Coahoma",
+ # added 2026-09-29 -- 14 of 49 records that week had no county
+ "Dundee":"Tunica","Magnolia":"Pike","Durant":"Holmes","Leland":"Washington","Indianola":"Sunflower",
+ "Sumrall":"Lamar","Canton":"Madison","Flowood":"Rankin","Ridgeland":"Madison","Madison":"Madison",
+ "Waveland":"Hancock","Bay St. Louis":"Hancock","Bay Saint Louis":"Hancock","Crystal Springs":"Copiah",
+ "Hernando":"DeSoto","Olive Branch":"DeSoto","Horn Lake":"DeSoto","Gautier":"Jackson","Forest":"Scott",
+ "Clinton":"Hinds","Byram":"Hinds","D'Iberville":"Harrison","Starkville":"Oktibbeha","Tupelo":"Lee",
+ "Oxford":"Lafayette","Meridian":"Lauderdale","Laurel":"Jones","Columbus":"Lowndes",
+ "Greenville":"Washington","Greenwood":"Leflore","Brookhaven":"Lincoln","Petal":"Forrest",
+ "Diamondhead":"Hancock","Poplarville":"Pearl River","Carriere":"Pearl River","Richland":"Rankin"}
 
 # ListingId -> (acres, building SF or '') where BuildingAreaTotal is really the LOT.
 # Each one checked against its own listing description.
@@ -66,6 +88,17 @@ TYPE_FIX = {
  "4162505": "Hospitality",  # "40 rooms and two apartments", ADR $45-50, 50% occupancy
  "4162622": "Retail",       # the Star Drive-In restaurant, Brookhaven
  "4162925": "Special Purpose",  # licensed medical-cannabis cultivation facility
+ # 2026-09-30 week
+ "4163840": "Multifamily",  # 24-unit apartment complex ("1.2 Acre Complex" hit the Land hint)
+ "4163431": "Mixed Use",    # 2.2 AC: RV sites, storage, hangar space and a rental mobile home
+ "4163242": "Special Purpose",  # operating lakeside event venue ("office parties" hit Office)
+ "4163892": "Special Purpose",  # two buildings, one configured as an event venue
+ "4163821": "Land",         # 2.10 AC; the older home is "of no contributory value"
+ "4163519": "Land",         # 9.13 AC of C-2 land; a 1949 residence conveys with it
+ "4163496": "Land",         # 61.10 AC on I-55 frontage
+ "4147828": "Land",         # beachfront corner lot "previously approved for a hotel"
+ "4163485": "Mixed Use",    # retail/office main level, renovated 2-BR apartment upstairs
+ "4149717": "Land",         # closed: "140 feet of prime Highway 90 frontage ... the site"
 }
 LAND_SF = {
  "4144121": ("4.8 AC", ""),      # "Estimated 4.8 acres of commercial land" - 209,305 SF is the LOT
@@ -92,6 +125,21 @@ LAND_SF = {
  "4159534": ("2.60 AC", ""),     # "1.8 AC of hard land and 0.8 AC of bottom land" = 2.6 AC
  "4152709": ("1.00 AC", ""),     # "almost 1 acre of land and SHOP"; 43,560 SF is exactly 1 AC
  "4139275": ("5.10 AC", ""),     # "mobile home park ... on 5.1 acres"; MLS reports 0 SF
+ # 2026-09-30 week
+ "4163216": ("4.14 AC", ""),     # "±4.14 acres"; 178,596 SF is the lot (4.10 AC)
+ "4144120": ("1.9 AC", ""),      # "1.9 acres of commercial land"; 82,764 SF is 1.90 AC
+ "4147828": ("1.44 AC", ""),     # beachfront corner lot; 62,906 SF = 1.44 AC, not a building
+}
+# ListingId -> acreage stated in the listing's OWN description, where MLS publishes no
+# lot figure at all. Unlike LAND_SF this does not claim the SF field is the lot.
+LOT_AC = {
+ "4163821": "2.10 AC",   # "2.10 acres of commercial property in the heart of downtown Pearl"
+ "4163519": "9.13 AC",   # "±9.13 acres of C-2 commercial land on US 80"
+ "4163496": "61.10 AC",  # "approximately 61.10 acres in Magnolia"
+ "4163431": "2.2 AC",    # "this unique 2.2± acre mixed-use property"
+ "4163272": "8 AC",      # "6,055 SF block wall commercial building on 8 acres"
+ "4163201": "1.5+ AC",   # "more than an acre and a half of prime commercial real estate"
+ "4163840": "1.2 AC",    # "1.2 Acre Complex"
 }
 # ListingId -> why it was dropped. PropertyType E/F is a commercial CODE, not a
 # commercial PROPERTY: agents do file houses under it. The description is the only
@@ -100,6 +148,10 @@ LAND_SF = {
 # still commercial). Standing rule: no residential in any array, from any source.
 DROP = {
  "4162643": "MLS description is 'This 3-bedroom, 2-bath home in Canton, MS' - a house",
+ "4163279": "16005 Landon Rd, Gulfport - 'This buildable lot is currently zoned R-1 ... Prefer to "
+            "build a home?' - an R-1 residential lot with a demo mobile home",
+ "4151157": "3222 Toncrey Rd, D'Iberville (pending) - 'a spacious 3-bedroom home' and 'an adorable "
+            "2-bedroom cottage' plus a warehouse - two houses",
 }
 
 TYPE_HINT = [
@@ -152,7 +204,7 @@ for section, p in parse_pipe(RAW):
     if lid in DROP:
         skipped.append((lid, addr, city, st, 'residential: ' + DROP[lid])); continue
     agent, office, desc = details.get(lid, ('', '', ''))
-    d = desc.strip()
+    d = demojibake(desc.strip())
     ty = ''
     # The Land hint matches the bare word "lot", which appears in plenty of
     # descriptions of BUILDINGS ("on a corner lot", "on a .52 acre lot"). Four
@@ -163,14 +215,17 @@ for section, p in parse_pipe(RAW):
         if t == 'Land' and _has_bldg: continue
         if re.search(pat, d, re.I): ty = t; break
     lot, bsf = LAND_SF.get(lid, ('', None))
+    if not lot and lid in LOT_AC:
+        lot = LOT_AC[lid]
     if bsf is None:
         bsf = (f"{int(float(sf)):,} SF" if sf and float(sf) > 0 else '')
-    is_land = bool(lot) and not bsf
+    is_land = bool(lot) and not bsf and lid not in LOT_AC
     if is_land: ty = 'Land'
     if lid in TYPE_FIX:
         ty = TYPE_FIX[lid]
         is_land = (ty == 'Land')
     if not ty: ty = 'Commercial'
+    if ty == 'Land': is_land = True
     notes = [d[:300]] if d else []
     if lid in LAND_SF:
         notes.append('MLS reports the lot area in its building-size field for this listing; '

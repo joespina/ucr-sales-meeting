@@ -89,17 +89,55 @@ def lot_of(kv):
     return acres(kv.get('Land Size', '')) or acres(kv.get('Total Available Space', ''))
 
 # --- the property-id / photo map -------------------------------------------------
-pid, photo, mapaddr = {}, {}, {}
+pid, photo, mapaddr, lotac, lotcat, lotcty = {}, {}, {}, {}, {}, {}
 for line in open(MAP_IN):
     line = line.rstrip('\n')
     if not line or line.startswith('#'): continue
     p = line.split('|')
     ident, img = p[1].replace('-', ''), p[4] if len(p) > 4 else ''
     street = (p[3].split(',')[0].strip() if len(p) > 3 else '')
+    # optional 6th field: lot.totalAcres off the property record. On 2026-09-29 every
+    # LAND listing in the PDF had "Total Available Space: Unknown" and no Land Size, so
+    # the PDF alone left all five land cards (18 to 72 acres) with no acreage.
+    ac = p[5].strip() if len(p) > 5 else ''
     for lid in p[2].split('/'):
         pid[lid] = ident
         photo[lid] = (CDN + img) if img else ''
         mapaddr[lid] = street
+        if ac:
+            try: lotac[lid] = float(ac)
+            except ValueError: pass
+        if len(p) > 6 and p[6].strip():
+            lotcat[lid] = p[6].strip().upper()
+        if len(p) > 7 and p[7].strip():             # 8th field: location.county off the record
+            lotcty[lid] = p[7].strip()
+
+# Per-listing source anomalies, stated on the card rather than silently corrected.
+NOTE = {}
+# A published Date Listed that is contradicted by independent evidence. Replaced only when
+# the disproving observation was actually made, and the card says what it was.
+LISTDATE_FIX = {
+ "45671952": ("2026-09-21",
+              "Moody's gives Date Listed 9/14/2022 (1,476 days on market), but Moody's first made "
+              "this listing active on Sep 25, 2026, the companion 18-acre Larue Rd tract (same owner, "
+              "same broker) is dated 9/14/2026, and Crexi's page for this property shows 8 days on "
+              "market. The 2022 date is almost certainly a typo; days on market here are Crexi's"),
+}
+
+DESC_AC = re.compile(r'(?:\u00b1|\+/-|approximately|approx\.?|~)?\s*(\d{1,4}(?:\.\d+)?)\s*(?:\u00b1\s*)?(?:wooded\s+|total\s+)?acres?\b', re.I)
+
+def desc_acres_note(desc, lot):
+    """The listing text sometimes states a different acreage from the property record:
+    6143 US Hwy 98, Hattiesburg is 28.67 AC on Moody's record (and price / price-per-acre
+    agrees) while its description sells '\u00b172 wooded acres'. Say so."""
+    if not desc or not lot: return ''
+    m = DESC_AC.search(desc)
+    if not m: return ''
+    try: d = float(m.group(1))
+    except ValueError: return ''
+    if d <= 0 or abs(d - lot) / lot <= 0.10: return ''
+    return ("The listing description says %s acres; Moody's property record shows %.2f AC. "
+            "Confirm the acreage before quoting" % (m.group(1), lot))
 
 # Moody's PDF sometimes prints the broker's HEADLINE on the address line instead of the
 # street: 45557987 came through as "Shopping Center FOR SALE, Hattiesburg, MS, 39402"
@@ -158,6 +196,26 @@ TYPE = {'Office':'Office','Retail':'Retail','Industrial':'Industrial','Land':'La
         'Flex':'Flex','Hospitality':'Hospitality','Health Care':'Special Purpose',
         'Sports & Entertainment':'Special Purpose','Special Purpose':'Special Purpose',
         'Mixed Use':'Mixed Use','Vacant Land':'Land'}
+
+def _mk(r0, addr):
+    """Moody's often fills the marketing name with the postal line itself ("Woolmarket Rd,
+    Biloxi, 39532", "500 Campbell Loop"), which renders as a subtitle repeating the address."""
+    mk = (r0.get('marketing') or '') if r0.get('address') else ''
+    if not mk: return ''
+    a, m = norm(addr), norm(mk)
+    if m == a or m.startswith(a) or m.startswith(norm(r0.get('address'))): return ''
+    return mk
+
+CAT = {'LAND':'Land','FARM_RANCH':'Farm/Ranch','OFFICE':'Office','RETAIL':'Retail',
+       'INDUSTRIAL':'Industrial','MULTIFAMILY':'Multifamily','FLEX':'Flex',
+       'HOSPITALITY':'Hospitality','SPECIAL_PURPOSE':'Special Purpose','MIXED_USE':'Mixed Use'}
+
+# A Building Size published on a record that is plainly bare land. Stated, not shown.
+SIZE_DROP = {
+ "45651115": "Moody's lists a 325,841 SF building on this tract, but the listing describes "
+             "wooded, undeveloped acreage and the record carries no year built; the building "
+             "size is not shown",
+}
 
 COMPANY = re.compile(r'(LLC|L\.L\.C|Inc\b|Group|Properties|Realty|Associates|Company|Partners|'
                      r'Advisors|Commercial|Real Estate|Brokerage|CRE|Bank|& Co|Holdings|Team)', re.I)
@@ -226,6 +284,15 @@ for (deal, _a, _c), g in groups.items():
     ident = next((pid[l] for l in lids if l in pid), '')
     img = next((photo[l] for l in lids if photo.get(l)), '')
     ptype = TYPE.get(kv.get('Property Type', ''), kv.get('Property Type', ''))
+    # The property record's own category (7th map field) settles a record the PDF leaves
+    # untyped. On 2026-09-29 the PDF carried no Property Type row on any land listing, and
+    # the "Land with a Building Size is not land" rule below then typed an 18-acre A-1
+    # agricultural tract (770 SF proposed building) and a 36.6-acre farm (1,146 SF
+    # bunkhouse) as "Commercial". Moody's record says LAND and FARM_RANCH.
+    cat = next((lotcat[l] for l in lids if l in lotcat), '')
+    cat_type = CAT.get(cat, '')
+    if not kv.get('Property Type') and cat_type:
+        ptype = cat_type
     if not ptype:
         # Land listings carry no "Property Type" row; the page header does ("Land For Sale").
         h = re.sub(r'\s+(?:For (?:Sale|Lease)|Sublease)$', '', r0.get('header', '')).strip()
@@ -239,7 +306,7 @@ for (deal, _a, _c), g in groups.items():
     #                    Building Size 22,092 SF  (a Piggly Wiggly)
     # A record that reports a Building Size is not land. Prefer the sub type, then the
     # header, then the subtype label's own ":" suffix, and only fall back to "Commercial".
-    if ptype == 'Land' and kv.get('Building Size'):
+    if ptype == 'Land' and kv.get('Building Size') and cat != 'LAND':
         alt = ''
         for cand in (kv.get('Sub Type', ''),
                      re.sub(r'\s+(?:For (?:Sale|Lease)|Sublease)$', '', r0.get('header', '')).strip(),
@@ -252,6 +319,8 @@ for (deal, _a, _c), g in groups.items():
     is_land = ptype == 'Land'
     dates = sorted(iso(x['kv'].get('Date Listed', '')) for x in g if iso(x['kv'].get('Date Listed', '')))
     listDate = dates[-1] if dates else ''
+    _ldfix = next((LISTDATE_FIX[l] for l in lids if l in LISTDATE_FIX), None)
+    if _ldfix: listDate = _ldfix[0]
 
     notes = []
     if len(g) > 1:
@@ -267,12 +336,26 @@ for (deal, _a, _c), g in groups.items():
     if r0.get('desc') and 'contact the agent' not in r0['desc'].lower():
         notes.append(re.sub(r'\s+', ' ', r0['desc'])[:300])
     if not img: notes.append(NO_PHOTO_NOTE)
+    for l in lids:
+        if l in NOTE: notes.insert(0, NOTE[l])
+    if _ldfix: notes.insert(0, _ldfix[1])
+    bsize = sf(kv.get('Building Size', ''))
+    for l in lids:
+        if l in SIZE_DROP:
+            bsize = ''; notes.insert(0, SIZE_DROP[l])
+    lot = lot_of(kv)
+    rec_ac = next((lotac[l] for l in lids if l in lotac), 0.0)
+    if not lot and rec_ac:
+        lot = '%.2f AC' % rec_ac
+    _dn = desc_acres_note(r0.get('desc') or '', rec_ac)
+    if _dn: notes.insert(0, _dn)
     contact, office = contact_of(r0)
 
     common = dict(address=addr, city=r0['city'], state='MS', zip=r0['zip'],
-                  county=(kv.get('County', '') + ' County') if kv.get('County') else '',
-                  type=ptype, isLand=is_land, marketingName=(r0['marketing'] if r0['address'] else ''),
-                  size=sf(kv.get('Building Size', '')), lotSize=lot_of(kv),
+                  county=((kv.get('County') or next((lotcty[l] for l in lids if l in lotcty), '')) + ' County')
+                         if (kv.get('County') or any(l in lotcty for l in lids)) else '',
+                  type=ptype, isLand=is_land, marketingName=_mk(r0, addr),
+                  size=bsize, lotSize=lot,
                   yearBuilt=(kv.get('Year Built') or kv.get('Year Built/Renovated') or '').split('/')[0],
                   zoning=kv.get('Zoning', ''), contact=contact, office=office,
                   listDate=listDate, domLabel=('' if listDate else 'N/A'), source='moodys',

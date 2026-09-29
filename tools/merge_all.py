@@ -77,6 +77,24 @@ ALIASES = {
     ("3100 us 80", "pearl"): ("3100 hwy 80 e", "pearl"),                    # Crexi -> CoStar, Harbor Freight
     ("801 ridgewood road", "ridgeland"): ("801 ridgewood rd", "ridgeland"), # Crexi -> CoStar, Staybridge $11.3M
     ("2022 us72", "corinth"): ("2022 highway 72 e", "corinth"),             # Moody's/Crexi -> CoStar, both $2,711,864
+    # 2026-09-30: each verified by matching price AND size, acreage or broker.
+    ("450 towne center boulevard", "ridgeland"): ("450 towne center blvd", "ridgeland"),  # MLS/Crexi -> CoStar, $10,000,000 care campus
+    ("3501 highway 72 west", "corinth"): ("3501 highway 72 w", "corinth"),  # Crexi -> CoStar, $649,000 Dollar General
+    ("5447 hwy 80 e", "pearl"): ("5447 highway 80 e", "pearl"),             # Crexi -> CoStar, $425,000, 9.13 AC
+    ("5447 us 80", "pearl"): ("5447 highway 80 e", "pearl"),                # MLS -> CoStar, $425,000, 9.13 AC
+    ("12483 dedeaux road", "gulfport"): ("12483 dedeaux rd", "gulfport"),   # MLS -> CoStar, $599,000, 7,000 SF
+    ("woolmarket road", "biloxi"): ("woolmarket rd", "biloxi"),             # Crexi -> CoStar/Moody's, $2,500,000, ~69.6 AC
+    ("5154 old highway 42", "hattiesburg"): ("2501 old hwy 42", "hattiesburg"),  # Crexi -> CoStar: 153,024 SF, CBRE Grant Ridgway on both; house numbers differ
+    ("1013 n flowood drive", "flowood"): ("1013 n flowood dr", "flowood"),  # MLS -> CoStar/Moody's, $545,000, 2,835 SF
+    ("177b bryan boulevard", "shannon"): ("177 bryan blvd", "shannon"),     # Crexi -> CoStar, $2,880,000, 22.60 AC
+    ("3624 jody nelson drive", "gulfport"): ("3624 jody nelson dr", "gulfport"),  # Crexi -> Moody's, $17,800,000 Bayou Apartments
+    ("16701 larue road", "vancleave"): ("16701 larue rd", "vancleave"),     # Crexi -> Moody's, $2,195,000, 36.6 AC
+    ("union road", "picayune"): ("000 union rd", "carriere"),               # Crexi -> CoStar, $1,800,000, 21.36 AC; cities differ
+    ("spillway rd", "brandon"): ("1679 old fannin road", "brandon"),        # Moody's -> CoStar "Spillway Road Commercial", both $450,000
+    ("103 us61", "leland"): ("103 old highway 61", "leland"),               # MLS/Crexi -> CoStar, both $1,500,000 (sizes differ, noted)
+    ("960 ebenezer boulevard", "madison"): ("960 ebenezer blvd", "madison"),  # Crexi -> Moody's, $35/SF/yr, 5,200 SF
+    ("212 draperton drive", "ridgeland"): ("212 draperton ct", "ridgeland"),  # Crexi -> CoStar, 1,500 SF, Sam Cox on all three
+    ("212 draperton dr", "ridgeland"): ("212 draperton ct", "ridgeland"),   # Moody's -> CoStar, same suite
     # 9008 McLaurin is listed twice on Crexi and once on MLS; the city is spelled
     # three ways. All three carry $699,000 / 14,000 SF.
     ("9008 mclaurin st", "bay st louis"): ("9008 mclaurin street", "bay st louis"),
@@ -108,6 +126,16 @@ ALIASES = {
 def akey(addr, city):
     k = (norm(addr), norm(city))
     return ALIASES.get(k, k)
+
+_SUFFIX = {"road": "rd", "drive": "dr", "street": "st", "avenue": "ave", "boulevard": "blvd",
+           "highway": "hwy", "parkway": "pkwy", "circle": "cir", "cove": "cv", "court": "ct",
+           "lane": "ln", "place": "pl", "north": "n", "south": "s", "east": "e", "west": "w",
+           "suite": "", "ste": ""}
+def _loose(addr, city):
+    """Address identity ignoring suffix spelling -- used only to decide whether an alias
+    joined two genuinely different addresses."""
+    w = [_SUFFIX.get(x, x) for x in norm(addr).split()]
+    return (" ".join(x for x in w if x), norm(city))
 
 def fix_land_flag(r):
     """`isLand` must agree with `type` on the MERGED record. 906 Sixth Ave, Picayune
@@ -210,6 +238,25 @@ def merge(out_path, sources):
                                       b_val, unit(r), r.get("source", "?")))
                             if msg not in tgt.get("notes", ""):
                                 tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + msg
+                    # SIZE is a headline figure too. 177 Bryan Blvd, Shannon is 320,000 SF on
+                    # CoStar and 120,000 SF on Crexi at the same $2,880,000 (2026-09-29); the fill
+                    # loop would have kept CoStar's and dropped Crexi's without a word.
+                    sa, sb = _num(tgt.get("size")), _num(r.get("size"))
+                    # Not for leases: there `size` is the building on one source and the suite on
+                    # another (212 Draperton: 6,400 SF building on CoStar, 1,500 SF suite on Crexi).
+                    if a != "forLease" and sa and sb and abs(sa - sb) / max(sa, sb) > 0.10:
+                        m3 = ("Sources disagree on the size: %s per %s, %s per %s — confirm before quoting"
+                              % (tgt.get("size"), tgt.get("source", "?").split(",")[0], r.get("size"), r.get("source", "?")))
+                        if m3 not in tgt.get("notes", ""):
+                            tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m3
+                        conflicts.append((a, tgt["id"], tgt.get("address"), "size", str(tgt.get("size")), str(r.get("size"))))
+                    # An ALIAS joins records whose addresses genuinely differ (a different house
+                    # number, a different city). Say what the other source calls it, so a broker
+                    # who searches by the other address still recognises the card.
+                    if _loose(tgt.get("address"), tgt.get("city")) != _loose(r.get("address"), r.get("city")):
+                        m4 = "%s lists this property as %s, %s" % (r.get("source", "?"), r.get("address"), r.get("city"))
+                        if m4 not in tgt.get("notes", ""):
+                            tgt["notes"] = (tgt.get("notes", "") + " · " if tgt.get("notes") else "") + m4
                     # When one source's rate is a self-describing string (because its
                     # own unit was not credible) and the other publishes a plain number,
                     # the second source is corroboration and belongs on the card: 510

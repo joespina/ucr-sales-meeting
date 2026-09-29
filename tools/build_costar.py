@@ -15,9 +15,11 @@ BOTH CoStar templates are handled, per record, automatically:
     reads as free.
 A single export can mix the two, so the choice is made per record, not per file.
 
-NOTE Neither template has carried broker contacts since 2026-08-19 -- only Recorded/
-True Owner, which is surfaced in notes. If contacts matter, Jo must re-export from
-the listing view.
+NOTE Broker contacts were absent from both templates 2026-08-19 .. 2026-09-22 (only
+Recorded/True Owner, surfaced in notes). They came back in the For Lease export on
+2026-09-29 as "Office: Name (phone), Name (phone)" lines; parse_costar extracts them and
+broker_of() below splits them into contact / phone / office. The For Sale export still
+carries owners only.
 
 EXPORT_DATE must match the date on the PDF footer; "On Market: 5 Days" is meaningless
 without it.
@@ -174,6 +176,19 @@ def cap_of(kv):
             if m: return m.group(1)
     return ''
 
+PERSON = re.compile(r"([A-Z][A-Za-z.'\- ]+?)\s(\(\d{3}\)\s\d{3}-\d{4})")
+
+def broker_of(g):
+    """(contact names, phones, office) from the first entry in the group that has a
+    broker line. Names and phones are kept in the same order."""
+    for x in g:
+        people = x[0].get('contact') or ''
+        if people:
+            ps = PERSON.findall(people)
+            return (', '.join(n.strip() for n, _ in ps) or people,
+                    ' / '.join(p for _, p in ps), x[0].get('office') or '')
+    return '', '', ''
+
 def notes_for(b, kv, extra=None):
     n=[]
     if b['ptype'] and b['ptype'] not in ('Land',): n.append(b['ptype'])
@@ -188,8 +203,9 @@ def notes_for(b, kv, extra=None):
     if kv.get('Topography'): n.append('Topography: '+kv['Topography'])
     if kv.get('Frontage'): n.append('Frontage: '+kv['Frontage'])
     if kv.get('Clear Height'): n.append("Clear height "+kv['Clear Height'])
-    if kv.get('Docks'): n.append(kv['Docks']+' docks')
-    if kv.get('Drive Ins'): n.append(kv['Drive Ins']+' drive-ins')
+    # CoStar writes "None" for a zero count; "None docks" read oddly on the card
+    if kv.get('Docks') and kv['Docks'] != 'None': n.append(kv['Docks']+' docks')
+    if kv.get('Drive Ins') and kv['Drive Ins'] != 'None': n.append(kv['Drive Ins']+' drive-ins')
     if kv.get('Parking Spaces'): n.append('Parking: '+kv['Parking Spaces'])
     own = b.get('owner') or kv.get('True Owner') or kv.get('Recorded Owner')
     if own: n.append('Owner: '+own)
@@ -271,16 +287,29 @@ def residential_use(kv):
     return ''
 
 DROPPED_RESI = []
+# Residential calls made from ANOTHER source's listing text for the same property, where the
+# CoStar fields alone do not show it. Keyed by (address, city) with the words that decided it.
+DROP_ADDR = {
+ ("Lickskillet Rd", "Biloxi"): "Crexi's listing for the same 19-acre tract reads 'The perfect setting "
+                               "for a beautiful subdivision' (2026-09-29)",
+}
 
 forSale=[]; i=0
 for key,g in groups.items():
     b,addr,mk = g[0]
     kv=merge_kv(g)
-    _why = residential_use(kv)
+    _why = residential_use(kv) or DROP_ADDR.get((addr, b['city']), '')
     if _why:
         DROPPED_RESI.append('forSale: %s, %s (%s)' % (addr, b['city'], _why))
         continue
     typ=TYPEFIX.get(b['ptype'], b['ptype'])
+    # "Apartments" -> Mixed Use was written for apartments over ground-floor commercial
+    # (611 Barnes Ave, 409 W Oak St). A plain apartment building with no commercial space
+    # offered is Multifamily, not Mixed Use (3380 Shady Oaks St / 1322 Shirley Ave,
+    # Jackson, a 2-property portfolio, 2026-09-29).
+    if b['ptype'] == 'Apartments' and not (kv.get('Commercial Available') or kv.get('Retail Available')
+            or kv.get('Available') or any(x[0]['spaces'] for x in g)):
+        typ = 'Multifamily'
     isLand = 'land' in typ.lower()
     extra=[]
     if len(g)>1:
@@ -327,6 +356,7 @@ for key,g in groups.items():
         zoning=kv.get('Zoning',''), alsoForLease=alsoLease,
         flags=('Under Contract' if 'contract' in status.lower() else ''),
         listDate=ld, domLabel=('' if ld else 'N/A'), source="costar",
+        contact=broker_of(g)[0], phone=broker_of(g)[1], office=broker_of(g)[2],
         costarUrl=costarurl(addr,b['city']), mapUrl=mapurl(addr,b['city']),
         notes=notes_for(b,kv,extra))))
 
@@ -352,6 +382,7 @@ for key,g in groups.items():
     if rows:
         extra.append('%d space%s listed' % (len(rows), '' if len(rows)==1 else 's'))
     svc = kv.get('Service Type','')
+    if svc.strip().upper() == 'TBD': svc = ''   # 7 Lakeland Cir NE rendered "$12.00/SF/yr TBD"
     SVC = {'Triple Net':'NNN','Full Service':'Full Service','Modified Gross':'MG',
            'Industrial Gross':'Industrial Gross','Plus All Utilities':'Plus Utilities'}
     if not rate and kv.get('Asking Rent','').strip().lower()=='withheld':
@@ -368,6 +399,7 @@ for key,g in groups.items():
         yearBuilt=(kv.get('Built') or '').split('/')[0], units=kv.get('Units',''),
         zoning=kv.get('Zoning',''), alsoForSale=ap,
         listDate=ld, domLabel=('' if ld else 'N/A'), source="costar",
+        contact=broker_of(g)[0], phone=broker_of(g)[1], office=broker_of(g)[2],
         costarUrl=costarurl(addr,b['city']),
         mapUrl=mapurl(addr,b['city']), notes=notes_for(b,kv,extra))))
 
@@ -391,3 +423,5 @@ if DROPPED_RESI:
     for x in DROPPED_RESI: print('   -', x)
 print('with price:', sum(1 for r in forSale if r['price']), '/', len(forSale))
 print('with rate :', sum(1 for r in forLease if r['askingRate']), '/', len(forLease))
+print('with broker:', sum(1 for r in forSale if r['contact']), '/', len(forSale), 'sale;',
+      sum(1 for r in forLease if r['contact']), '/', len(forLease), 'lease')
